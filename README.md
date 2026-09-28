@@ -23,7 +23,7 @@ jot server        # http://localhost:3000
 
 ## Status
 
-M0/M1 em construção — walking skeleton (`jot new` → `jot server` com banco, rotas, controllers e views). Veja `docs/architecture.md` para o contrato técnico.
+M0/M1 concluídos e M2 em andamento: `jot new` gera o app, `jot generate model|scaffold` cria models e CRUD REST com JSX SSR, SQLite, migrations SQL, validações e flash. O fluxo de scaffold está coberto por e2e de ponta a ponta. Ainda não é um release publicado; CSRF e associações ActiveRecord seguem no roadmap. Veja `docs/architecture.md` para o contrato técnico.
 
 ## Estrutura
 
@@ -33,7 +33,7 @@ M0/M1 em construção — walking skeleton (`jot new` → `jot server` com banco
 | `@jot/db` | Schema DSL (Drizzle) + driver SQLite + runner de migrations |
 | `@jot/orm` | Camada ActiveRecord (`Model`, validações) |
 | `@jot/views` | Runtime JSX SSR + cliente mínimo (`jot-*`) |
-| `@jot/cli` | Binário `jot` (server, new, db:*, routes, console) |
+| `@jot/cli` | Binário `jot` (server, new, generate, db:*, routes, console) |
 | `jot-framework` | Meta-pacote que os apps importam |
 | `create-jot` | `npm create jot@latest` |
 
