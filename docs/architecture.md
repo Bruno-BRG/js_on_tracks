@@ -312,8 +312,9 @@ acontece em processo filho `node --import tsx` (o CLI nunca importa o app direta
 Comandos M1:
 - `jot new <nome> [--no-install]` — copia `templates/app`, substitui `__APP_NAME__`, roda `npm install`
   (pulado com `--no-install`).
-- `jot server` — `collect` + spawn `node --import tsx --watch --enable-source-maps .jot/entry.ts`
+- `jot server` — `collect` + spawn `node --disable-warning=ExperimentalWarning --import tsx --watch --enable-source-maps .jot/entry.ts`
   com `stdio: inherit`; repassa SIGINT. Loga `JOT v<versão> → http://localhost:<porta>`.
+  Matar a árvore de processos no Windows exige `taskkill /pid <pid> /T /F` (o `--watch` cria processo filho).
 - `jot db:generate` — spawn `drizzle-kit generate` (gera `db/migrate/*.sql` a partir de `db/schema.ts`).
 - `jot db:migrate` / `jot db:rollback [n]` — spawn script gerado `.jot/db-script.ts`.
 - `jot routes` — spawn `.jot/routes-script.ts` e imprime a tabela.
@@ -339,7 +340,8 @@ Comandos M1:
   import database from "../config/database.ts"   // omitido se o arquivo não existir
   await start({ app, routes, database })
   ```
-- `db-script.ts` e `routes-script.ts` para os comandos correspondentes.
+- `db-script.ts`, `routes-script.ts` e `console-script.ts` para os comandos correspondentes
+  (o CLI nunca importa código do app no próprio processo — sempre em processo filho).
 - Imports usam extensão explícita `.ts`/`.tsx`; ordem determinística (alfabética).
 - Views em `app/views/layouts/**` também entram no registry como `layouts/<nome>`.
 
