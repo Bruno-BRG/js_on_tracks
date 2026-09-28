@@ -180,8 +180,8 @@ export function refs(target: () => AnyTable, options: RefsOptions = {}) {
         const table = target() as unknown as { id?: SQLiteColumn }
         if (!table.id) {
           throw databaseError(
-            'refs(...) exige que a tabela referenciada tenha uma coluna "id". ' +
-              "Declare `id: id()` na tabela alvo (ou referencie a coluna correta).",
+            'refs(...) requires the referenced table to have an "id" column. ' +
+              "Declare `id: id()` on the target table (or reference the correct column).",
           )
         }
         return table.id

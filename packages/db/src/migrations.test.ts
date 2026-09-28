@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
@@ -101,7 +101,7 @@ test("migration duplicada (mesmo nome ignorando caixa) falha com erro didático"
   t.after(fixture.cleanup)
   assert.throws(
     () => assertNoDuplicateMigrations(["0001_a.sql", "0001_A.SQL"], fixture.dir),
-    /migration duplicada/,
+    /duplicate migration/,
   )
   assert.doesNotThrow(() => assertNoDuplicateMigrations(["0001_a.sql", "0002_b.sql"], fixture.dir))
 })
@@ -113,7 +113,7 @@ test("pasta de migrations inexistente falha com erro didático", async () => {
   )
   const driver = sqliteDriver({ file: ":memory:" })
   try {
-    await assert.rejects(() => migrate(driver, missing), /pasta de migrations não encontrada/)
+    await assert.rejects(() => migrate(driver, missing), /migrations directory not found/)
   } finally {
     await driver.close()
   }
@@ -124,7 +124,7 @@ test("migration vazia falha com erro didático e não registra nada", async (t) 
   t.after(fixture.cleanup)
   const driver = sqliteDriver({ file: ":memory:" })
   try {
-    await assert.rejects(() => migrate(driver, fixture.dir), /está vazia/)
+    await assert.rejects(() => migrate(driver, fixture.dir), /is empty: no SQL found/)
     assert.deepEqual(await driver.query("select name from jot_migrations"), [])
   } finally {
     await driver.close()
@@ -241,7 +241,7 @@ test("rollback sem -- jot:down falha com erro didático e não altera nada", asy
     await migrate(driver, fixture.dir)
     await assert.rejects(
       () => rollback(driver, fixture.dir),
-      /não define -- jot:down; crie a seção ou edite o banco manualmente/,
+      /does not define -- jot:down; add the section or edit the database manually/,
     )
     assert.deepEqual(await tables(driver), ["posts", "users"])
     assert.equal((await driver.query("select name from jot_migrations")).length, 2)
@@ -260,7 +260,7 @@ test("rollback com seção -- jot:down vazia falha com erro didático", async (t
     await migrate(driver, fixture.dir)
     await assert.rejects(
       () => rollback(driver, fixture.dir),
-      /seção -- jot:down da migration "0001_docs.sql" está vazia/,
+      /the -- jot:down section of migration "0001_docs.sql" is empty/,
     )
     assert.deepEqual(await tables(driver), ["docs"])
   } finally {
@@ -273,12 +273,12 @@ test("rollback valida quantidade: nada aplicado, steps maior e steps inválido",
   t.after(fixture.cleanup)
   const driver = sqliteDriver({ file: ":memory:" })
   try {
-    await assert.rejects(() => rollback(driver, fixture.dir), /não há migrations aplicadas/)
+    await assert.rejects(() => rollback(driver, fixture.dir), /no applied migrations to roll back/)
 
     await migrate(driver, fixture.dir)
-    await assert.rejects(() => rollback(driver, fixture.dir, 4), /apenas 3 estão aplicadas/)
-    await assert.rejects(() => rollback(driver, fixture.dir, 0), /número inteiro/)
-    await assert.rejects(() => rollback(driver, fixture.dir, 1.5), /número inteiro/)
+    await assert.rejects(() => rollback(driver, fixture.dir, 4), /only 3 are applied/)
+    await assert.rejects(() => rollback(driver, fixture.dir, 0), /integer number of migrations/)
+    await assert.rejects(() => rollback(driver, fixture.dir, 1.5), /integer number of migrations/)
   } finally {
     await driver.close()
   }
@@ -295,7 +295,7 @@ test("rollback de migration cujo arquivo sumiu falha com erro didático", async 
     rmSync(join(fixture.dir, "0001_users.sql"))
     await assert.rejects(
       () => rollback(driver, fixture.dir),
-      /registrada em jot_migrations não existe em/,
+      /registered in jot_migrations does not exist in/,
     )
   } finally {
     await driver.close()
@@ -359,9 +359,97 @@ test("registro duplicado em jot_migrations vira erro didático (e a transação 
   t.after(fixture.cleanup)
   const driver = sqliteDriver({ file: ":memory:" })
   try {
-    await assert.rejects(() => migrate(driver, fixture.dir), /migration duplicada/)
+    await assert.rejects(() => migrate(driver, fixture.dir), /duplicate migration/)
     assert.deepEqual(await driver.query("select name from jot_migrations"), [])
   } finally {
     await driver.close()
+  }
+})
+
+// Regressão MINOR-01: o marcador dentro de string multilinha não pode ser tratado como seção.
+test("-- jot:down dentro de string multilinha não vira marcador", async (t) => {
+  const fixture = makeDir({
+    "0001_notes.sql":
+      "create table notes (id integer primary key, body text);\n" +
+      "insert into notes (id, body) values (1, 'line1\n-- jot:down\nline3');\n" +
+      "-- jot:down\ndrop table notes;\n",
+  })
+  t.after(fixture.cleanup)
+  const driver = sqliteDriver({ file: ":memory:" })
+  try {
+    const parsed = loadMigrations(fixture.dir)[0]
+    assert.ok(parsed)
+    assert.match(parsed.sql, /line3'/)
+    assert.equal(parsed.down, "drop table notes;\n")
+
+    assert.deepEqual(await migrate(driver, fixture.dir), ["0001_notes.sql"])
+    const rows = await driver.query("select body from notes")
+    assert.deepEqual(
+      rows.map((row) => row.body),
+      ["line1\n-- jot:down\nline3"],
+    )
+    assert.deepEqual(await rollback(driver, fixture.dir), ["0001_notes.sql"])
+    assert.deepEqual(await tables(driver), [])
+  } finally {
+    await driver.close()
+  }
+})
+
+// Regressão MINOR-02: entrada `*.sql` que é diretório não pode estourar EISDIR cru.
+test("entrada *.sql que é diretório falha com erro didático", async (t) => {
+  const fixture = makeDir({})
+  t.after(fixture.cleanup)
+  mkdirSync(join(fixture.dir, "weird.sql"))
+
+  const driver = sqliteDriver({ file: ":memory:" })
+  try {
+    await assert.rejects(() => migrate(driver, fixture.dir), /is a directory, not a migration file/)
+  } finally {
+    await driver.close()
+  }
+})
+
+test("mensagens de erro das migrations estão em inglês (sem acentos)", async (t) => {
+  const messages: string[] = []
+  const capture = async (run: () => Promise<unknown>): Promise<void> => {
+    try {
+      await run()
+    } catch (error) {
+      messages.push((error as Error).message)
+    }
+  }
+
+  const missing = join(
+    tmpdir(),
+    `jot-db-missing-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  )
+  const driver = sqliteDriver({ file: ":memory:" })
+  try {
+    await capture(() => migrate(driver, missing))
+    await capture(() => rollback(driver, missing))
+
+    const empty = makeDir({ "0001_empty.sql": "-- nothing\n" })
+    t.after(empty.cleanup)
+    await capture(() => migrate(driver, empty.dir))
+
+    const noDown = makeDir({ "0001_plain.sql": "create table a (id integer primary key);" })
+    t.after(noDown.cleanup)
+    await migrate(driver, noDown.dir)
+    await capture(() => rollback(driver, noDown.dir))
+    await capture(() => rollback(driver, noDown.dir, 0))
+    await capture(() => rollback(driver, noDown.dir, 5))
+
+    try {
+      assertNoDuplicateMigrations(["0001_a.sql", "0001_A.sql"], noDown.dir)
+    } catch (error) {
+      messages.push((error as Error).message)
+    }
+  } finally {
+    await driver.close()
+  }
+
+  assert.ok(messages.length >= 6, `esperava 6+ mensagens, veio: ${messages.join(" | ")}`)
+  for (const message of messages) {
+    assert.match(message, /^[\x20-\x7E]+$/, `mensagem com caracteres não-ASCII: ${message}`)
   }
 })

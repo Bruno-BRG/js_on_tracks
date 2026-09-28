@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { type Driver, databaseError, splitSqlStatements } from "./driver"
 
@@ -24,14 +24,71 @@ function compareNames(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-function parseMigration(name: string, contents: string): MigrationFile {
+/**
+ * Índice da linha que contém apenas `-- jot:down`, considerando só o nível de topo:
+ * o texto `-- jot:down` dentro de string multilinha ou comentário de bloco não conta.
+ */
+function findDownMarkerLine(contents: string): number | null {
   const lines = contents.split(/\r?\n/)
-  const markerIndex = lines.findIndex((line) => line.trim() === DOWN_MARKER)
-  if (markerIndex === -1) return { name, sql: contents, down: null }
+  let quote: string | null = null
+  let inBlockComment = false
+
+  for (const [lineIndex, line] of lines.entries()) {
+    if (quote === null && !inBlockComment && line.trim() === DOWN_MARKER) return lineIndex
+
+    let index = 0
+    while (index < line.length) {
+      const char = line.charAt(index)
+      const next = line[index + 1]
+
+      if (inBlockComment) {
+        if (char === "*" && next === "/") {
+          inBlockComment = false
+          index += 2
+          continue
+        }
+        index++
+        continue
+      }
+
+      if (quote !== null) {
+        if (char === quote) {
+          if (line[index + 1] === quote) {
+            // Escape do SQLite: '' / "" / `` dentro da string/identificador.
+            index += 2
+            continue
+          }
+          quote = null
+        }
+        index++
+        continue
+      }
+
+      if (char === "-" && next === "-") break
+      if (char === "/" && next === "*") {
+        inBlockComment = true
+        index += 2
+        continue
+      }
+      if (char === "'" || char === '"' || char === "`") {
+        quote = char
+        index++
+        continue
+      }
+      index++
+    }
+  }
+  return null
+}
+
+function parseMigration(name: string, contents: string): MigrationFile {
+  const markerLine = findDownMarkerLine(contents)
+  if (markerLine === null) return { name, sql: contents, down: null }
+  const lines = contents.split(/\r?\n/)
   return {
     name,
-    sql: lines.slice(0, markerIndex).join("\n"),
-    down: lines.slice(markerIndex + 1).join("\n"),
+    sql: lines.slice(0, markerLine).join("\n"),
+    down: lines.slice(markerLine + 1).join("\n"),
   }
 }
 
@@ -46,8 +103,8 @@ export function assertNoDuplicateMigrations(files: string[], dir: string): void 
     const previous = seen.get(key)
     if (previous !== undefined) {
       throw databaseError(
-        `migration duplicada: "${previous}" e "${file}" em ${dir}. ` +
-          "Renomeie um dos arquivos (os nomes diferem apenas por maiúsculas/minúsculas).",
+        `duplicate migration: "${previous}" and "${file}" in ${dir}. ` +
+          "Rename one of the files (the names differ only by letter case).",
       )
     }
     seen.set(key, file)
@@ -55,22 +112,32 @@ export function assertNoDuplicateMigrations(files: string[], dir: string): void 
 }
 
 /**
- * Lê `*.sql` da pasta, em ordem lexicográfica determinística (não depende de locale).
- * Falha com erro didático para pasta ausente e migrations duplicadas.
+ * Lê `*.sql` da pasta, em ordem lexicográfica determinística (não depende de locale; o
+ * drizzle-kit usa prefixos de largura fixa, ex.: `0001_`). Falha com erro didático para
+ * pasta ausente, entrada que não é arquivo e migrations duplicadas.
  */
 export function loadMigrations(migrationsDir: string): MigrationFile[] {
   const dir = resolve(migrationsDir)
   if (!existsSync(dir)) {
     throw databaseError(
-      `pasta de migrations não encontrada: ${dir}. ` +
-        "Crie a pasta (ex.: db/migrate) ou rode `jot db:generate` para gerar a primeira migration.",
+      `migrations directory not found: ${dir}. ` +
+        "Create it (e.g. db/migrate) or run `jot db:generate` to generate the first migration.",
     )
   }
 
-  const files = readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".sql"))
+  const entries = readdirSync(dir).filter((name) => name.toLowerCase().endsWith(".sql"))
+  const files: string[] = []
+  for (const entry of entries) {
+    if (!statSync(join(dir, entry)).isFile()) {
+      throw databaseError(
+        `"${entry}" in ${dir} is a directory, not a migration file. Remove it or rename it.`,
+      )
+    }
+    files.push(entry)
+  }
   assertNoDuplicateMigrations(files, dir)
 
-  return [...files]
+  return files
     .sort(compareNames)
     .map((name) => parseMigration(name, readFileSync(join(dir, name), "utf8")))
 }
@@ -96,8 +163,8 @@ async function runAtomically(driver: Driver, work: () => Promise<void>): Promise
   } catch (error) {
     if (/within a transaction|cannot start a transaction/i.test(errorMessage(error))) {
       throw databaseError(
-        "migrate()/rollback() não podem rodar dentro de outra transação; " +
-          "finalize a transação atual antes de aplicar migrations.",
+        "migrate()/rollback() cannot run inside another transaction; " +
+          "finish the current transaction before applying migrations.",
       )
     }
     transactional = false
@@ -146,8 +213,8 @@ async function registerMigration(driver: Driver, name: string): Promise<void> {
   } catch (error) {
     if (isUniqueViolation(error)) {
       throw databaseError(
-        `migration duplicada: "${name}" já está registrada em ${MIGRATIONS_TABLE}. ` +
-          "Outro processo pode tê-la aplicado; rode o migrate novamente.",
+        `duplicate migration: "${name}" is already registered in ${MIGRATIONS_TABLE}. ` +
+          "Another process may have applied it; run migrate again.",
       )
     }
     throw error
@@ -158,8 +225,8 @@ async function applyMigration(driver: Driver, migration: MigrationFile): Promise
   const upSql = migration.sql
   if (splitSqlStatements(upSql).length === 0) {
     throw databaseError(
-      `migration "${migration.name}" está vazia: nenhum SQL encontrado antes de "${DOWN_MARKER}". ` +
-        "Escreva o SQL ou remova o arquivo.",
+      `migration "${migration.name}" is empty: no SQL found before "${DOWN_MARKER}". ` +
+        "Write the SQL or delete the file.",
     )
   }
 
@@ -185,9 +252,7 @@ export async function migrate(driver: Driver, migrationsDir: string): Promise<st
     try {
       await applyMigration(driver, migration)
     } catch (error) {
-      throw databaseError(
-        `falha ao aplicar a migration "${migration.name}": ${errorMessage(error)}`,
-      )
+      throw databaseError(`failed to apply migration "${migration.name}": ${errorMessage(error)}`)
     }
     applied.add(migration.name)
     ran.push(migration.name)
@@ -206,7 +271,7 @@ export async function rollback(
 ): Promise<string[]> {
   if (!Number.isInteger(steps) || steps < 1) {
     throw databaseError(
-      `rollback espera um número inteiro de migrations (>= 1); recebeu ${String(steps)}.`,
+      `rollback expects an integer number of migrations (>= 1); received ${String(steps)}.`,
     )
   }
 
@@ -216,11 +281,11 @@ export async function rollback(
   const applied = await getAppliedNames(driver)
 
   if (applied.length === 0) {
-    throw databaseError("não há migrations aplicadas para desfazer.")
+    throw databaseError("there are no applied migrations to roll back.")
   }
   if (steps > applied.length) {
     throw databaseError(
-      `rollback pediu ${steps} migration(s), mas apenas ${applied.length} estão aplicadas: ` +
+      `rollback asked for ${steps} migration(s), but only ${applied.length} are applied: ` +
         `${applied.join(", ")}.`,
     )
   }
@@ -234,21 +299,21 @@ export async function rollback(
     const migration = byName.get(name)
     if (!migration) {
       throw databaseError(
-        `migration "${name}" registrada em ${MIGRATIONS_TABLE} não existe em ${dir}. ` +
-          "Restaure o arquivo ou remova o registro manualmente.",
+        `migration "${name}" registered in ${MIGRATIONS_TABLE} does not exist in ${dir}. ` +
+          "Restore the file or remove the record manually.",
       )
     }
 
     const downSql = migration.down
     if (downSql === null) {
       throw databaseError(
-        `migration "${name}" não define -- jot:down; crie a seção ou edite o banco manualmente.`,
+        `migration "${name}" does not define -- jot:down; add the section or edit the database manually.`,
       )
     }
     if (splitSqlStatements(downSql).length === 0) {
       throw databaseError(
-        `a seção -- jot:down da migration "${name}" está vazia; ` +
-          "escreva o SQL de rollback ou edite o banco manualmente.",
+        `the -- jot:down section of migration "${name}" is empty; ` +
+          "write the rollback SQL or edit the database manually.",
       )
     }
     targets.push({ name, downSql })

@@ -16,6 +16,7 @@ import {
   real,
   refs,
   setDefaultDatabase,
+  sqliteDriver,
   string,
   table,
   text,
@@ -87,7 +88,7 @@ async function rejectsWithCause(run: () => Promise<unknown>, pattern: RegExp): P
 
 // Este teste precisa ser o primeiro do arquivo: roda antes de qualquer setDefaultDatabase.
 test("getDefaultDatabase sem banco definido falha com erro didático", () => {
-  assert.throws(() => getDefaultDatabase(), /nenhum banco configurado/)
+  assert.throws(() => getDefaultDatabase(), /no database configured/)
   assert.throws(() => getDefaultDatabase(), /setDefaultDatabase/)
 })
 
@@ -96,7 +97,7 @@ test("setDefaultDatabase/getDefaultDatabase e limpeza ao fechar", async () => {
   setDefaultDatabase(db)
   assert.equal(getDefaultDatabase(), db)
   await db.close()
-  assert.throws(() => getDefaultDatabase(), /nenhum banco configurado/)
+  assert.throws(() => getDefaultDatabase(), /no database configured/)
 })
 
 test("CRUD completo via drizzle com chaves JS em camelCase", async () => {
@@ -213,6 +214,77 @@ test("FK: violação bloqueada e cascade ao apagar o pai", async () => {
   }
 })
 
+// Regressão MAJOR-01: joins com nomes de coluna repetidos (posts.id/users.id) têm de manter
+// todos os valores na ordem correta — Object.values colapsaria as chaves duplicadas.
+test("join com colunas de mesmo nome preserva todos os valores", async () => {
+  const db = await createMemoryDb()
+  try {
+    const [ana] = await db.drizzle
+      .insert(users)
+      .values({ name: "Ana", email: "ana@jot.dev", createdAt: at(1), updatedAt: at(1) })
+      .returning()
+    const [bia] = await db.drizzle
+      .insert(users)
+      .values({ name: "Bia", email: "bia@jot.dev", createdAt: at(1), updatedAt: at(1) })
+      .returning()
+    assert.ok(ana)
+    assert.ok(bia)
+
+    const [post] = await db.drizzle
+      .insert(posts)
+      .values({ authorId: bia.id, title: "T", createdAt: at(2), updatedAt: at(2) })
+      .returning()
+    assert.ok(post)
+
+    const rows = await db.drizzle
+      .select()
+      .from(posts)
+      .innerJoin(users, eq(posts.authorId, users.id))
+    assert.equal(rows.length, 1)
+    const row = rows[0]
+    assert.ok(row)
+    assert.equal(row.posts.id, post.id)
+    assert.equal(row.posts.authorId, bia.id)
+    assert.equal(row.posts.title, "T")
+    assert.equal(row.users.id, bia.id)
+    assert.equal(row.users.name, "Bia")
+    assert.equal(row.users.email, "bia@jot.dev")
+  } finally {
+    await db.close()
+  }
+})
+
+test("join continua correto com logQueries ligado (queryArrays é encaminhado)", async (t) => {
+  const debug = t.mock.method(console, "debug", () => {})
+  const db = createDatabase({ url: ":memory:", schema: { users, posts }, logQueries: true })
+  try {
+    await db.exec(USERS_DDL)
+    await db.exec(POSTS_DDL)
+
+    const [bia] = await db.drizzle
+      .insert(users)
+      .values({ name: "Bia", email: "bia@jot.dev", createdAt: at(1), updatedAt: at(1) })
+      .returning()
+    assert.ok(bia)
+    const [post] = await db.drizzle
+      .insert(posts)
+      .values({ authorId: bia.id, title: "T", createdAt: at(2), updatedAt: at(2) })
+      .returning()
+    assert.ok(post)
+
+    const rows = await db.drizzle
+      .select()
+      .from(posts)
+      .innerJoin(users, eq(posts.authorId, users.id))
+    assert.equal(rows[0]?.posts.title, "T")
+    assert.equal(rows[0]?.users.id, bia.id)
+    assert.equal(rows[0]?.users.name, "Bia")
+    assert.ok(debug.mock.calls.length > 0, "logQueries deveria registrar as queries")
+  } finally {
+    await db.close()
+  }
+})
+
 test("db.exec: select, params, DDL e múltiplos statements", async () => {
   const db = await createMemoryDb()
   try {
@@ -296,16 +368,16 @@ test("logQueries loga SQL, params e duração via console.debug", async (t) => {
 test("url postgres falha com erro didático", () => {
   assert.throws(
     () => createDatabase({ url: "postgres://localhost:5432/blog", schema: { users } }),
-    /Postgres chega no M3; use SQLite por enquanto/,
+    /Postgres support arrives in M3; use SQLite for now/,
   )
   assert.throws(
     () => createDatabase({ url: "POSTGRESQL://localhost/blog", schema: { users } }),
-    /Postgres chega no M3/,
+    /Postgres support arrives in M3/,
   )
 })
 
 test("url vazia falha com erro didático", () => {
-  assert.throws(() => createDatabase({ url: "", schema: { users } }), /url de banco vazia/)
+  assert.throws(() => createDatabase({ url: "", schema: { users } }), /database url is empty/)
 })
 
 test("arquivo em pasta temporária (mkdtemp): cria diretórios e persiste", async () => {
@@ -344,8 +416,86 @@ test("arquivo em pasta temporária (mkdtemp): cria diretórios e persiste", asyn
 test("migrationsDir default aponta para db/migrate do diretório atual", async () => {
   const db = createDatabase({ url: ":memory:", schema: { users } })
   try {
+    assert.equal(db.root, process.cwd())
     assert.equal(db.migrationsDir, join(process.cwd(), "db", "migrate"))
   } finally {
     await db.close()
+  }
+})
+
+test("root ancora o migrationsDir default", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "jot-db-root-"))
+  try {
+    const db = createDatabase({ url: ":memory:", schema: { users }, root: dir })
+    try {
+      assert.equal(db.root, dir)
+      assert.equal(db.migrationsDir, join(dir, "db", "migrate"))
+    } finally {
+      await db.close()
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("logQueries com logParams=false omite os valores", async (t) => {
+  const debug = t.mock.method(console, "debug", () => {})
+  const db = createDatabase({
+    url: ":memory:",
+    schema: { users },
+    logQueries: true,
+    logParams: false,
+  })
+  try {
+    await db.exec(USERS_DDL)
+    await db.exec("select * from users where name = ?", ["Ana"])
+    const messages = debug.mock.calls.map((call) => String(call.arguments[0]))
+    assert.ok(
+      messages.some((message) => message.includes("[omitted]")),
+      `faltou o placeholder de params omitidos: ${messages.join(" | ")}`,
+    )
+    assert.ok(
+      !messages.some((message) => message.includes("Ana")),
+      `params não deveriam aparecer no log: ${messages.join(" | ")}`,
+    )
+  } finally {
+    await db.close()
+  }
+})
+
+test("mensagens ao usuário estão em inglês (sem acentos)", async () => {
+  const messages: string[] = []
+  const capture = (run: () => unknown): void => {
+    try {
+      run()
+    } catch (error) {
+      messages.push((error as Error).message)
+    }
+  }
+  const captureAsync = async (run: () => Promise<unknown>): Promise<void> => {
+    try {
+      await run()
+    } catch (error) {
+      messages.push((error as Error).message)
+    }
+  }
+
+  capture(() => createDatabase({ url: "postgres://localhost/blog", schema: { users } }))
+  capture(() => createDatabase({ url: "   ", schema: { users } }))
+  capture(() => sqliteDriver({ file: "" }))
+  capture(() => sqliteDriver({ file: "file://server/share/dev.sqlite" }))
+
+  const driver = sqliteDriver({ file: ":memory:" })
+  try {
+    await driver.run("create table t (value)")
+    await captureAsync(() => driver.run("insert into t (value) values (?)", [{ a: 1 }]))
+    await captureAsync(() => driver.run("select 1; select 2"))
+  } finally {
+    await driver.close()
+  }
+
+  assert.ok(messages.length >= 6, `esperava 6+ mensagens, veio: ${messages.join(" | ")}`)
+  for (const message of messages) {
+    assert.match(message, /^[\x20-\x7E]+$/, `mensagem com caracteres não-ASCII: ${message}`)
   }
 })

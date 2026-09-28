@@ -65,11 +65,11 @@ test("valores não suportados falham com erro didático", async () => {
     await driver.run("create table t (value)")
     await assert.rejects(
       () => driver.run("insert into t (value) values (?)", [{ a: 1 }]),
-      /não é possível gravar um valor do tipo Object no SQLite/,
+      /cannot store a value of type Object in SQLite/,
     )
     await assert.rejects(
       () => driver.run("insert into t (value) values (?)", [[1, 2]]),
-      /do tipo array/,
+      /value of type array/,
     )
   } finally {
     await driver.close()
@@ -93,11 +93,11 @@ test("exec aceita múltiplos statements; query/run recusam com erro didático", 
     // DatabaseSync.prepare() compilaria só o primeiro statement e ignoraria o resto em silêncio.
     await assert.rejects(
       () => driver.run("create table c (x); create table d (y)"),
-      /run\(\) aceita um statement por vez; use exec\(\)/,
+      /run\(\) accepts one statement at a time; use exec\(\)/,
     )
     await assert.rejects(
       () => driver.query("select 1; select 2"),
-      /query\(\) aceita um statement por vez; use exec\(\)/,
+      /query\(\) accepts one statement at a time; use exec\(\)/,
     )
     const tables = await driver.query(
       "select name from sqlite_master where type = 'table' order by name",
@@ -186,5 +186,58 @@ test("url file:// aceita URLs absolutas", async () => {
 })
 
 test("url vazia falha com erro didático", () => {
-  assert.throws(() => sqliteDriver({ file: "  " }), /url de banco vazia/)
+  assert.throws(() => sqliteDriver({ file: "  " }), /database url is empty/)
+})
+
+test("queryArrays devolve linhas posicionais e query segue devolvendo objetos", async () => {
+  const driver = sqliteDriver({ file: ":memory:" })
+  try {
+    const queryArrays = driver.queryArrays
+    assert.ok(queryArrays, "sqliteDriver deve expor queryArrays (setReturnArrays)")
+
+    // Nomes repetidos: a leitura posicional preserva todos os valores, na ordem das colunas.
+    assert.deepEqual(await queryArrays("select 1 as id, 2 as uid, 3 as id"), [[1, 2, 3]])
+    assert.deepEqual(await queryArrays("select ? as a, ? as b, ? as a", ["x", 7, "x"]), [
+      ["x", 7, "x"],
+    ])
+
+    // O contrato §4.1 continua: query() devolve objetos indexados pelo nome da coluna.
+    const objects = await driver.query("select 1 as id, 2 as uid, 3 as id")
+    assert.deepEqual({ ...objects[0] }, { id: 3, uid: 2 })
+
+    await assert.rejects(
+      () => queryArrays("select 1; select 2"),
+      /queryArrays\(\) accepts one statement at a time; use exec\(\)/,
+    )
+  } finally {
+    await driver.close()
+  }
+})
+
+test("resolveSqliteFile lida com formas de URL de borda", async () => {
+  // file::memory: com query string → :memory:
+  const memory = sqliteDriver({ file: "file::memory:?cache=shared" })
+  await memory.run("create table m (x)")
+  await memory.close()
+
+  // file: relativo com percent-encoding é decodificado.
+  const dir = tempDir()
+  const spaced = join(dir, "db x", "dev.sqlite")
+  try {
+    const driver = sqliteDriver({ file: `file:${spaced.replace(/ /g, "%20")}` })
+    try {
+      await driver.run("create table t (x)")
+    } finally {
+      await driver.close()
+    }
+    assert.equal(existsSync(spaced), true)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+
+  assert.throws(
+    () => sqliteDriver({ file: "file://server/share/dev.sqlite" }),
+    /unsupported host "server"/,
+  )
+  assert.throws(() => sqliteDriver({ file: "file://./x.sqlite" }), /unsupported host "\."/)
 })

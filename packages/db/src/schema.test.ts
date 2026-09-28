@@ -197,7 +197,7 @@ test("refs() sem coluna id na tabela alvo falha com erro didático", () => {
   assert.ok(foreignKey)
   assert.throws(
     () => foreignKey.reference(),
-    /exige que a tabela referenciada tenha uma coluna "id"/,
+    /requires the referenced table to have an "id" column/,
   )
 })
 

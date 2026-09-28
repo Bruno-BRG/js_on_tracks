@@ -127,7 +127,7 @@ Regras de migration:
 - Arquivo: `db/migrate/0001_create_posts.sql`, aplicado em ordem de nome.
 - Tabela de controle: `jot_migrations (id integer pk, name text not null unique, applied_at integer)`.
 - Down: tudo após a linha `-- jot:down` é o SQL de rollback. Sem a seção, `rollback` falha com erro
-  didático ("migration X não define -- jot:down; crie a seção ou edite o banco manualmente").
+  didático ("migration \"X\" does not define -- jot:down; add the section or edit the database manually.").
 - Migrations rodam no **driver cru**, não via Drizzle.
 - `createDatabase` com `url` postgres → erro didático "Postgres support arrives in M3; use SQLite for now."
 
@@ -137,9 +137,16 @@ interface Driver {
   query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>
   run(sql: string, params?: unknown[]): Promise<void>
   close(): Promise<void>
+  /** Opcional: linhas posicionais para joins com nomes repetidos (node:sqlite: setReturnArrays). */
+  queryArrays?(sql: string, params?: unknown[]): Promise<unknown[][]>
+  /** Opcional: SQL multi-statement cru (node:sqlite: DatabaseSync.exec). */
+  exec?(sql: string): Promise<void>
 }
 sqliteDriver({ file }): Driver      // node:sqlite DatabaseSync
 ```
+
+`DatabaseOptions` extras aprovados: `root?` (ancia o default de `migrationsDir`), `logParams?` (default
+`true`; `false` omite os params do log), `schema?` (opcional; só para o API relacional do Drizzle).
 
 ### 4.2 `@jot/orm`
 
