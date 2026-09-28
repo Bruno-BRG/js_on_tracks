@@ -1,0 +1,25 @@
+{
+  "name": "@jot/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "drizzle-kit": "^0.31.11",
+    "picocolors": "^1.1.1",
+    "tsx": "^4.23.15"
+  },
+  "bin": {
+    "jot": "bin/jot.js"
+  }
+}

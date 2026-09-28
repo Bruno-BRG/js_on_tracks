@@ -1,0 +1,23 @@
+{
+  "name": "create-jot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jot/cli": "*"
+  },
+  "bin": {
+    "create-jot": "bin/create-jot.js"
+  }
+}

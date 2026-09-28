@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.jot/
+.tmp-e2e/
+*.log
+.env
+.env.local
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+coverage/
+.DS_Store
+Thumbs.db

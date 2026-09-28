@@ -1,0 +1,23 @@
+{
+  "name": "jot-framework",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jot/core": "*",
+    "@jot/db": "*",
+    "@jot/orm": "*",
+    "@jot/views": "*"
+  }
+}

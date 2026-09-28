@@ -1,0 +1,25 @@
+{
+  "name": "@jot/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@jot/db": "*",
+    "@jot/orm": "*",
+    "@jot/views": "*",
+    "hono": "^4.13.9",
+    "picocolors": "^1.1.1"
+  }
+}
