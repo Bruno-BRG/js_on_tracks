@@ -38,6 +38,12 @@ import { runValidation, type Validations } from "./validations"
 
 const PERSISTED = new WeakSet<object>()
 const ERRORS = new WeakMap<object, Errors>()
+/**
+ * `save()` em andamento por instância: chamadas concorrentes na MESMA instância reutilizam a
+ * operação (senão cada `await` passaria pelo `INSERT` e criaria N linhas). A entrada é
+ * removida quando a operação termina, então um `save()` posterior volta a persistir mudanças.
+ */
+const SAVING = new WeakMap<object, Promise<boolean>>()
 
 /** Convenção de auditoria do `timestamps()` do `@jot/db` (colunas `createdAt`/`updatedAt`). */
 const CREATED_AT = "createdAt"
@@ -91,6 +97,53 @@ function newRecord<C extends ModelClass>(ctor: C, data?: Input<TableOf<C>>): Rec
   // Garante os dados mesmo se a subclasse declarar um construtor próprio sem repassar `data`.
   assignColumns(instance, requireTable(ctor), data)
   return instance
+}
+
+/**
+ * Corpo do `save()` (extraído para o `WeakMap` de operações em andamento em `Model.save`).
+ * Valida e persiste: `UPDATE` se a instância já foi carregada/salva, `INSERT` caso contrário.
+ */
+async function persist(instance: Model<AnyTable>): Promise<boolean> {
+  if (!instance.isValid()) return false
+
+  const table = requireTable(instance.constructor)
+  const columns = columnsOf(table)
+  const pk = primaryKeyOf(table)
+  const values = columnValues(instance, columns)
+
+  if (PERSISTED.has(instance)) {
+    const id = (instance as unknown as Record<string, unknown>)[pk.name]
+    if (id === undefined || id === null) {
+      throw new OrmError(
+        `cannot update '${getTableName(table)}' without a primary key value.`,
+        "load a persisted row with find()/findBy()/where(), or save() it first.",
+      )
+    }
+    if (columns[CREATED_AT]?.dataType === "date") delete values[CREATED_AT]
+    if (columns[UPDATED_AT]?.dataType === "date") values[UPDATED_AT] = new Date()
+
+    const row = await updateRow(table, values, eq(pk.column, id))
+    assignColumns(instance, table, row)
+    return true
+  }
+
+  const pkValue = values[pk.name]
+  if (pkValue === undefined || pkValue === null) {
+    if (!pk.autoIncrement) {
+      throw new OrmError(
+        `missing value for primary key '${pk.name}'.`,
+        "this table's primary key is not autoincrement; set it before calling save().",
+      )
+    }
+    delete values[pk.name]
+  }
+  if (columns[CREATED_AT]?.dataType === "date") values[CREATED_AT] ??= new Date()
+  if (columns[UPDATED_AT]?.dataType === "date") values[UPDATED_AT] ??= new Date()
+
+  const row = await insertRow(table, values)
+  assignColumns(instance, table, row)
+  PERSISTED.add(instance)
+  return true
 }
 
 /**
@@ -167,48 +220,21 @@ export class Model<TTable extends AnyTable = AnyTable> {
    * Valida e persiste: `UPDATE` se a instância foi carregada/salva antes, `INSERT` caso
    * contrário. `createdAt`/`updatedAt` são automáticos (colunas `dataType === "date"`).
    * Devolve `false` (sem persistir) quando `isValid()` falha.
+   *
+   * Chamadas concorrentes na mesma instância (`Promise.all([post.save(), post.save()])`)
+   * compartilham a operação em andamento — um registro novo é inserido uma única vez.
    */
   async save(): Promise<boolean> {
-    if (!this.isValid()) return false
+    const pending = SAVING.get(this)
+    if (pending !== undefined) return pending
 
-    const table = requireTable(this.constructor)
-    const columns = columnsOf(table)
-    const pk = primaryKeyOf(table)
-    const values = columnValues(this, columns)
-
-    if (PERSISTED.has(this)) {
-      const id = (this as Record<string, unknown>)[pk.name]
-      if (id === undefined || id === null) {
-        throw new OrmError(
-          `cannot update '${getTableName(table)}' without a primary key value.`,
-          "load a persisted row with find()/findBy()/where(), or save() it first.",
-        )
-      }
-      if (columns[CREATED_AT]?.dataType === "date") delete values[CREATED_AT]
-      if (columns[UPDATED_AT]?.dataType === "date") values[UPDATED_AT] = new Date()
-
-      const row = await updateRow(table, values, eq(pk.column, id))
-      assignColumns(this, table, row)
-      return true
+    const operation = persist(this)
+    SAVING.set(this, operation)
+    try {
+      return await operation
+    } finally {
+      SAVING.delete(this)
     }
-
-    const pkValue = values[pk.name]
-    if (pkValue === undefined || pkValue === null) {
-      if (!pk.autoIncrement) {
-        throw new OrmError(
-          `missing value for primary key '${pk.name}'.`,
-          "this table's primary key is not autoincrement; set it before calling save().",
-        )
-      }
-      delete values[pk.name]
-    }
-    if (columns[CREATED_AT]?.dataType === "date") values[CREATED_AT] ??= new Date()
-    if (columns[UPDATED_AT]?.dataType === "date") values[UPDATED_AT] ??= new Date()
-
-    const row = await insertRow(table, values)
-    assignColumns(this, table, row)
-    PERSISTED.add(this)
-    return true
   }
 
   /**

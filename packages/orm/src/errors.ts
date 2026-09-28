@@ -5,13 +5,16 @@
 /**
  * Todo erro previsto do ORM. A mensagem final concatena `message` + `hint`
  * (ex.: "table 'posts' has no primary key. define one with `id: id()` ...").
+ * `options.cause` preserva o erro original do driver quando a falha vem do banco
+ * (ex.: violação de UNIQUE/PK em `save()`).
  */
 export class OrmError extends Error {
   constructor(
     message: string,
     readonly hint: string,
+    options?: ErrorOptions,
   ) {
-    super(`${message} ${hint}`)
+    super(`${message} ${hint}`, options)
     this.name = "OrmError"
   }
 }

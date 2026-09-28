@@ -93,6 +93,36 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
+/** Mensagens do erro e da cadeia de `cause`s (o Drizzle encapsula o erro do driver). */
+function errorChain(error: unknown): string[] {
+  const messages: string[] = []
+  let current: unknown = error
+  for (let depth = 0; depth < 4 && current instanceof Error; depth++) {
+    messages.push(current.message)
+    current = (current as { cause?: unknown }).cause
+  }
+  return messages
+}
+
+/**
+ * Converte violações de UNIQUE/PK (falha previsível: id explícito duplicado, valor repetido
+ * em coluna única) em `OrmError` didático, preservando o erro original em `cause`.
+ * Outras falhas (NOT NULL, FK, ...) seguem cruas.
+ */
+function constraintError(error: unknown, table: AnyTable): OrmError | undefined {
+  const detail = errorChain(error).find((message) =>
+    /unique constraint|primary key constraint/i.test(message),
+  )
+  if (detail === undefined) return undefined
+
+  const columns = /failed:\s*([^\n]+)/i.exec(detail)?.[1]?.trim()
+  return new OrmError(
+    `duplicate value for a unique column in '${getTableName(table)}'${columns === undefined ? "" : ` (${columns})`}.`,
+    "use a different value; for autoincrement primary keys, call save() without setting `id`.",
+    { cause: error },
+  )
+}
+
 /**
  * Normaliza o filtro: callback recebe a tabela (operadores avançados); objeto aplica
  * igualdade por campo (`undefined` é ignorado); campo desconhecido → `OrmError`.
@@ -220,18 +250,23 @@ export async function insertRow<TTable extends AnyTable>(
   table: TTable,
   values: Record<string, unknown>,
 ): Promise<Row<TTable>> {
-  const rows = await drizzle()
-    .insert(table)
-    .values(values as SQLiteInsertValue<TTable>)
-    .returning()
-  const row = rows[0]
+  let row: Row<TTable> | undefined
+  try {
+    const rows = await drizzle()
+      .insert(table)
+      .values(values as SQLiteInsertValue<TTable>)
+      .returning()
+    row = rows[0] as Row<TTable> | undefined
+  } catch (error) {
+    throw constraintError(error, table) ?? error
+  }
   if (row === undefined) {
     throw new OrmError(
       `insert into '${getTableName(table)}' did not return the created row.`,
       "confirm that the database driver supports returning().",
     )
   }
-  return row as Row<TTable>
+  return row
 }
 
 export async function updateRow<TTable extends AnyTable>(
@@ -239,19 +274,24 @@ export async function updateRow<TTable extends AnyTable>(
   values: Record<string, unknown>,
   where: SQL<unknown>,
 ): Promise<Row<TTable>> {
-  const rows = await drizzle()
-    .update(table)
-    .set(values as SQLiteUpdateSetSource<TTable>)
-    .where(where)
-    .returning()
-  const row = rows[0]
+  let row: Row<TTable> | undefined
+  try {
+    const rows = await drizzle()
+      .update(table)
+      .set(values as SQLiteUpdateSetSource<TTable>)
+      .where(where)
+      .returning()
+    row = rows[0] as Row<TTable> | undefined
+  } catch (error) {
+    throw constraintError(error, table) ?? error
+  }
   if (row === undefined) {
     throw new OrmError(
       `update on '${getTableName(table)}' did not return the updated row.`,
       "confirm that the row still exists and the driver supports returning().",
     )
   }
-  return row as Row<TTable>
+  return row
 }
 
 export async function deleteRow<TTable extends AnyTable>(

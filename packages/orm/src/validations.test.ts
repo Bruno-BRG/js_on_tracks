@@ -61,6 +61,34 @@ test("format() matches the pattern and accepts a custom message", () => {
   assert.equal(runValidation(format(/^\d+$/, "digits only"), "code", "x"), "digits only")
 })
 
+test("format() is deterministic with global and sticky regexes", () => {
+  // `/g` e `/y` mantêm `lastIndex`; o mesmo valor deve dar sempre o mesmo resultado.
+  const global = format(/^[0-9]+$/g)
+  assert.equal(runValidation(global, "code", "123"), undefined)
+  assert.equal(runValidation(global, "code", "123"), undefined)
+  assert.equal(runValidation(global, "code", "123"), undefined)
+  assert.equal(runValidation(global, "code", "12a"), "has an invalid format")
+  assert.equal(runValidation(global, "code", "12a"), "has an invalid format")
+  assert.equal(runValidation(global, "code", "12a"), "has an invalid format")
+
+  const sticky = format(/^[0-9]+$/y)
+  assert.equal(runValidation(sticky, "code", "123"), undefined)
+  assert.equal(runValidation(sticky, "code", "123"), undefined)
+})
+
+test("isValid() is deterministic with a global regex", () => {
+  class RegexPost extends Model<typeof posts> {
+    static readonly table = posts
+    static validations = { title: [format(/^[a-z]+$/g)] }
+  }
+
+  const post = RegexPost.new({ title: "abc" })
+  assert.equal(post.isValid(), true)
+  assert.equal(post.isValid(), true)
+  assert.equal(post.isValid(), true)
+  assert.deepEqual(post.errors, {})
+})
+
 test("an unknown validation kind raises OrmError with the field name", () => {
   const unknown = { kind: "wat" } as unknown as Validation
 

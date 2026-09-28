@@ -24,6 +24,12 @@ export const posts = table("posts", {
   ...timestamps(),
 })
 
+/** Tabela auxiliar dos testes de concorrência/constraint (nome único). */
+export const widgets = table("widgets", {
+  id: id(),
+  name: string().notNull().unique(),
+})
+
 const POSTS_DDL = `create table posts (
   id integer primary key autoincrement,
   title text not null,
@@ -33,13 +39,19 @@ const POSTS_DDL = `create table posts (
   updated_at integer not null
 )`
 
+const WIDGETS_DDL = `create table widgets (
+  id integer primary key autoincrement,
+  name text not null unique
+)`
+
 let database: Database | undefined
 
 /** Cria (uma vez) o banco `:memory:` com o schema do teste e o define como default. */
 export async function useTestDatabase(): Promise<Database> {
   if (database !== undefined) return database
-  const created = createDatabase({ url: ":memory:", schema: { posts } })
+  const created = createDatabase({ url: ":memory:", schema: { posts, widgets } })
   await created.exec(POSTS_DDL)
+  await created.exec(WIDGETS_DDL)
   setDefaultDatabase(created)
   database = created
   return created

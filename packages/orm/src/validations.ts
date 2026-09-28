@@ -95,6 +95,11 @@ export function runValidation(
     case "format": {
       if (value === null || value === undefined) return undefined
       if (typeof value !== "string") return "must be a string"
+      // As flags `/g` e `/y` mantêm `lastIndex` entre chamadas de `test()`; zerar antes de
+      // testar garante o mesmo resultado para o mesmo valor (o validador é reutilizado por
+      // toda a aplicação). Preferimos normalizar a rejeitar `/g`: `format(/^\d+$/g)` é um
+      // engano comum e inofensivo — o contrato não restringe as flags.
+      validation.pattern.lastIndex = 0
       return validation.pattern.test(value) ? undefined : validation.message
     }
     default: {

@@ -5,7 +5,7 @@ import assert from "node:assert/strict"
 import { after, test } from "node:test"
 import { id, string, table } from "@jot/db"
 import { and, eq, gt, Model, minLength, OrmError, presence } from "./index"
-import { closeTestDatabase, posts, useTestDatabase } from "./test-fixtures"
+import { closeTestDatabase, posts, useTestDatabase, widgets } from "./test-fixtures"
 
 class Post extends Model<typeof posts> {
   static readonly table = posts
@@ -19,6 +19,11 @@ class Post extends Model<typeof posts> {
 // Mesma tabela, sem validações: isola a semântica de update()/save() no teste de undefined/null.
 class LoosePost extends Model<typeof posts> {
   static readonly table = posts
+}
+
+// Tabela própria para os testes de concorrência e de constraint (nome é UNIQUE).
+class Widget extends Model<typeof widgets> {
+  static readonly table = widgets
 }
 
 async function rejectsWithOrmError(
@@ -257,6 +262,53 @@ test("controller-style flow: new(params) → save() → find(String(id))", async
 
   const found = await LoosePost.find(String(post.id))
   assert.equal(found?.title, "From params")
+})
+
+test("concurrent save() calls on the same new instance insert a single row", async () => {
+  await useTestDatabase()
+
+  const widget = Widget.new({ name: "Concurrent" })
+  const results = await Promise.all([widget.save(), widget.save(), widget.save()])
+
+  assert.deepEqual(results, [true, true, true])
+  assert.equal(await Widget.count(), 1) // nenhuma linha duplicada
+  assert.equal((await Widget.where({ name: "Concurrent" })).length, 1)
+  assert.equal(typeof widget.id, "number")
+
+  // Depois de resolvida, a instância volta a persistir normalmente (UPDATE, não outro INSERT).
+  widget.update({ name: "Concurrent v2" })
+  assert.equal(await widget.save(), true)
+  assert.equal(await Widget.count(), 1)
+  assert.equal((await Widget.find(widget.id))?.name, "Concurrent v2")
+})
+
+test("duplicate primary key or unique value raises didactic OrmError preserving cause", async () => {
+  await useTestDatabase()
+  const before = await Widget.count()
+
+  const widget = await Widget.create({ name: "Unique one" })
+  assert.equal(await Widget.count(), before + 1)
+
+  const duplicateId = await rejectsWithOrmError(
+    () => Widget.create({ id: widget.id, name: "Unique two" }),
+    /duplicate value for a unique column in 'widgets'/,
+  )
+  assert.match(duplicateId.message, /use a different value/)
+  assert.ok(duplicateId.cause instanceof Error)
+  // O Drizzle encapsula o erro do driver: a cadeia de `cause` preserva o motivo original.
+  const driverCause = (duplicateId.cause as { cause?: unknown }).cause
+  assert.match(String(driverCause), /UNIQUE constraint failed: widgets\.id/)
+
+  await rejectsWithOrmError(
+    () => Widget.create({ name: "Unique one" }),
+    /duplicate value for a unique column/,
+  )
+
+  const other = await Widget.create({ name: "Unique three" })
+  other.update({ name: "Unique one" })
+  await rejectsWithOrmError(() => other.save(), /duplicate value for a unique column/)
+
+  assert.equal(await Widget.count(), before + 2) // nenhuma tentativa duplicada entrou
 })
 
 test("destroy() without a primary key value raises OrmError", async () => {
