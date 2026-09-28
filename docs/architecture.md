@@ -25,6 +25,8 @@ atualizado de propósito, nunca por acidente.
   na definição da coluna).
 - **Windows-first**: `process.execPath`, `node:path`, `node:fs`. Nada de POSIX.
 - **Erros didáticos**: toda mensagem prevista diz o que o usuário deve fazer.
+- **Idioma**: mensagens voltadas ao usuário da framework (erros de runtime, CLI, páginas de erro) em
+  **inglês** (framework é open source). Comentários de código e docs internos podem ser em português.
 - Pacotes exportam **fonte TS** (`"exports": { ".": "./src/index.ts" }`) nesta fase. O bundling para
   publicação é um milestone posterior.
 
