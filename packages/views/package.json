@@ -13,7 +13,7 @@
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },
   "scripts": {
-    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "test": "node --import tsx --test \"src/**/*.test.ts\" \"src/**/*.test.tsx\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {}
