@@ -23,7 +23,7 @@ jot server        # http://localhost:3000
 
 ## Status
 
-M0/M1 concluídos e M2 em andamento: `jot new` gera o app, `jot generate model|scaffold` cria models e CRUD REST com JSX SSR, SQLite, migrations SQL, validações e flash. O fluxo de scaffold está coberto por e2e de ponta a ponta. Ainda não é um release publicado; CSRF e associações ActiveRecord seguem no roadmap. Veja `docs/architecture.md` para o contrato técnico.
+M0/M1 concluídos e M2 em andamento: `jot new` gera o app, `jot generate model|scaffold` cria models e CRUD REST com JSX SSR, SQLite, migrations SQL, validações e flash. O fluxo de scaffold está coberto por e2e de ponta a ponta, e CSRF default-on protege rotas mutáveis. Ainda não é um release publicado; associações ActiveRecord seguem no roadmap. Veja `docs/architecture.md` para o contrato técnico.
 
 ## Estrutura
 

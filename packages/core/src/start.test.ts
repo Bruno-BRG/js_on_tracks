@@ -11,7 +11,7 @@ import { routes } from "./routes"
 import { start } from "./server"
 
 const root = mkdtempSync(join(tmpdir(), "jot-start-"))
-const SECRET = "test-secret"
+const SECRET = "test-secret-for-jot-session-tests-with-32-bytes"
 
 test("start sobe na porta 0, loga a linha de listening e responde/recebe 200", async (t) => {
   __clearRegistries()

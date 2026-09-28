@@ -13,7 +13,11 @@ writeFileSync(join(root, "public", "styles.css"), "body { color: red }", "utf8")
 writeFileSync(join(root, "public", "sub", "index.html"), "<h1>Sub</h1>", "utf8")
 writeFileSync(join(root, "secret.txt"), "top secret", "utf8")
 
-const app = createApp({ routes: routes(() => {}), root, secret: "test-secret" })
+const app = createApp({
+  routes: routes(() => {}),
+  root,
+  secret: "test-secret-for-jot-session-tests-with-32-bytes",
+})
 
 test("serve public/styles.css com content-type e sem Set-Cookie", async () => {
   const response = await app.request("/styles.css")

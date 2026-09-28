@@ -10,15 +10,23 @@ export type ActionRef = `${string}#${string}`
 /** Ações convencionais de `r.resource(...)`. */
 export type ResourceAction = "index" | "new" | "create" | "show" | "edit" | "update" | "destroy"
 
+/** Isenção CSRF explícita para uma rota autenticada por outro mecanismo. */
+export interface CsrfExemption {
+  exempt: true
+  reason: string
+}
+
 /** Opções de uma rota avulsa; `as` define o nome do helper em `paths`. */
 export interface RouteOptions {
   as?: string
+  csrf?: CsrfExemption
 }
 
 /** Filtros de `r.resource(...)`; `only` e `except` são mutuamente exclusivos. */
 export interface ResourceOptions {
   only?: readonly ResourceAction[]
   except?: readonly ResourceAction[]
+  csrf?: CsrfExemption
 }
 
 /** Rota resolvida da DSL. */
@@ -33,6 +41,8 @@ export interface RouteDefinition {
   readonly action: string
   /** Nome do helper em `paths`, quando a rota tem um. */
   readonly as?: string
+  /** Isenção explícita para webhook/API com autenticação independente. */
+  readonly csrf?: CsrfExemption
 }
 
 /** Tabela imutável devolvida por `routes()`. */
@@ -90,7 +100,14 @@ export function routes(build: (r: RouteBuilder) => void): RouteTable {
 }
 
 function createBuilder(definitions: RouteDefinition[]): RouteBuilder {
-  const add = (method: HttpMethod, path: string, to: ActionRef, as?: string): void => {
+  const add = (
+    method: HttpMethod,
+    path: string,
+    to: ActionRef,
+    as?: string,
+    csrf?: CsrfExemption,
+  ): void => {
+    if (csrf !== undefined) assertCsrfExemption(csrf)
     const { controller, action } = parseActionRef(to)
     const normalizedPath = normalizePath(path)
     const duplicate = definitions.find(
@@ -109,6 +126,7 @@ function createBuilder(definitions: RouteDefinition[]): RouteBuilder {
       controllerKey: pascal(controller),
       action,
       ...(as !== undefined ? { as } : {}),
+      ...(csrf !== undefined ? { csrf: { exempt: true, reason: csrf.reason.trim() } } : {}),
     }
     definitions.push(Object.freeze(definition))
   }
@@ -119,33 +137,52 @@ function createBuilder(definitions: RouteDefinition[]): RouteBuilder {
       return builder
     },
     get(path, to, options) {
-      add("GET", path, to, options?.as)
+      add("GET", path, to, options?.as, options?.csrf)
       return builder
     },
     post(path, to, options) {
-      add("POST", path, to, options?.as)
+      add("POST", path, to, options?.as, options?.csrf)
       return builder
     },
     put(path, to, options) {
-      add("PUT", path, to, options?.as)
+      add("PUT", path, to, options?.as, options?.csrf)
       return builder
     },
     patch(path, to, options) {
-      add("PATCH", path, to, options?.as)
+      add("PATCH", path, to, options?.as, options?.csrf)
       return builder
     },
     delete(path, to, options) {
-      add("DELETE", path, to, options?.as)
+      add("DELETE", path, to, options?.as, options?.csrf)
       return builder
     },
     resource(name, options) {
       for (const spec of resourceSpecs(name, options)) {
-        add(spec.method, spec.path, `${name}#${spec.action}`, spec.as)
+        const csrf = isUnsafeMethod(spec.method) ? options?.csrf : undefined
+        add(spec.method, spec.path, `${name}#${spec.action}`, spec.as, csrf)
       }
       return builder
     },
   }
   return builder
+}
+
+function assertCsrfExemption(value: CsrfExemption): void {
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    value.exempt !== true ||
+    typeof value.reason !== "string" ||
+    value.reason.trim().length === 0
+  ) {
+    throw new Error(
+      'A CSRF route exemption requires a non-empty reason. Use { csrf: { exempt: true, reason: "..." } } only for a route with independent authentication.',
+    )
+  }
+}
+
+function isUnsafeMethod(method: HttpMethod): boolean {
+  return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE"
 }
 
 function parseActionRef(ref: string): { controller: string; action: string } {

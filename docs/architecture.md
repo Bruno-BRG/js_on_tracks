@@ -295,7 +295,30 @@ await start({ app, routes, database, root: process.cwd(), port? })
 - `env(name, fallback?)` lê process.env e devolve fallback se ausente.
 - Sessão: cookie `jot_session` assinado com HMAC-SHA256 usando `JOT_SECRET`
   (em dev, ausente → gera aleatório por boot com aviso; em prod, ausente → erro didático).
+- O token CSRF synchronizer fica privado na sessão assinada; `get`/`has`/`all` não o expõem.
+  Tokens têm 32 bytes aleatórios codificados em base64url, permanecem estáveis na sessão e só
+  mudam por `this.session.rotateCsrfToken()` (por exemplo, após autenticar, sair ou mudar privilégios).
   Flash: mensagens consumidas no próximo render.
+- CSRF: proteção **default-on** (também pode ser declarada como `csrf: { enabled: true }` em
+  `defineApp`). `POST`, `PUT`, `PATCH` e `DELETE` exigem o token; `GET`, `HEAD` e `OPTIONS` são
+  seguros e não o exigem. O middleware verifica o método efetivo depois do `_method` override.
+  Formulários urlencoded/multipart enviam o token em `_csrf`; requests JSON/API usam
+  `X-CSRF-Token` (um `_csrf` no JSON body não autentica). Query string nunca autentica; quando
+  campo e header são enviados juntos, ambos devem ser válidos e iguais. O campo `_csrf` é removido
+  antes de `body`/`params` chegarem ao controller.
+- Forms gerados pelo scaffold incluem o hidden `_csrf` nas views de new/edit e no delete de show;
+  forms manuais usam o `csrfToken` injetado pelo framework. `this.csrfToken()` fornece o mesmo
+  token para clientes JSON, e respostas render/JSON que o emitem são `private, no-store`.
+- Falha ou ausência de token devolve `403` genérico antes da action, sem refletir token ou body;
+  a resposta é `no-store`, `nosniff` e `Vary: Accept`, negociando HTML/JSON. Sem `Accept`, o
+  Content-Type JSON da request prefere JSON; se nenhuma representação suportada for aceitável,
+  o fallback determinístico é HTML.
+- Opt-outs são explícitos e avisam no boot, inclusive em produção, para a desativação global e
+  cada isenção de rota mutável. Desativação global exige
+  `csrf: { enabled: false, reason: "..." }` com razão não vazia. Isenção de rota exige
+  `csrf: { exempt: true, reason: "..." }` e deve ficar restrita a endpoints com autenticação
+  independente (por exemplo, webhook com assinatura verificada); `r.resource` aceita a mesma
+  opção e a aplica somente às ações mutáveis.
 - Log de requests: `GET /posts 200 12ms` com cores (picocolors).
 - Static: `public/**` servido em `/` (com `Content-Type` correto e 404 para arquivos ausentes).
 - Dev: erro 500 = página HTML com mensagem e stack. Produção: página genérica.
@@ -404,7 +427,7 @@ spawn: node --import tsx --watch --enable-source-maps .jot/entry.ts
 
 ## 8. Escopo desta fase (NÃO fazer agora)
 
-Associações, callbacks, CSRF, sessions em banco, generators/scaffold (M2), jobs, mailer, uploads,
+Associações, callbacks, sessions em banco, generators/scaffold (M2), jobs, mailer, uploads,
 Postgres, bundling de produção, publicação npm, i18n, ilhas/client components.
 
 ## 9. Definição de pronto

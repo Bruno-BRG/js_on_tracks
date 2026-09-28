@@ -10,7 +10,20 @@ import { routes } from "./routes"
 import { createApp } from "./server"
 
 const root = mkdtempSync(join(tmpdir(), "jot-dispatch-"))
-const SECRET = "test-secret"
+const SECRET = "test-secret-for-jot-session-tests-with-32-bytes"
+
+function createDispatchTestApp(options: Parameters<typeof createApp>[0]) {
+  return createApp({
+    ...options,
+    app: {
+      name: "dispatch-tests",
+      csrf: {
+        enabled: false,
+        reason: "This suite tests dispatch and body parsing; default-on CSRF is tested separately.",
+      },
+    },
+  })
+}
 
 test("index recebe query; show recebe route param", async () => {
   __clearRegistries()
@@ -49,7 +62,7 @@ test("POST urlencoded: body parseado e params mesclados (route > body > query)",
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets/:id", "widgets#create")
     }),
@@ -112,7 +125,7 @@ test("_method=delete: re-dispatch para destroy e body sem _method", async () => 
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.resource("widgets", { only: ["destroy"] })
     }),
@@ -147,7 +160,7 @@ test("_method=patch (minúsculo) faz re-dispatch para update, sem 404", async ()
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.resource("widgets", { only: ["update"] })
     }),
@@ -180,7 +193,7 @@ test("json aceita status customizado", async () => {
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets", "widgets#create")
     }),
@@ -202,7 +215,7 @@ test("_method inválido segue POST normal", async () => {
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets", "widgets#create")
     }),
@@ -233,7 +246,7 @@ test("body multipart: strings em params, File fica só no body", async () => {
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets", "widgets#create")
     }),
@@ -267,7 +280,7 @@ test("body JSON: valores preservados no body; params só com strings", async () 
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets", "widgets#create")
     }),
@@ -298,7 +311,7 @@ test("body JSON inválido vira {}", async () => {
     }
   }
   registerControllers({ Widgets: WidgetsController })
-  const app = createApp({
+  const app = createDispatchTestApp({
     routes: routes((r) => {
       r.post("/widgets", "widgets#create")
     }),

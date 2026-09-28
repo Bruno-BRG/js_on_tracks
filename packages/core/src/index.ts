@@ -6,7 +6,7 @@
  * CLI (manifest/entry) e pelos testes.
  */
 
-export { type AppConfig, defineApp } from "./app"
+export { type AppConfig, type CsrfConfig, defineApp } from "./app"
 export {
   Controller,
   type ControllerContext,
@@ -31,6 +31,7 @@ export {
 } from "./registry"
 export {
   type ActionRef,
+  type CsrfExemption,
   type HttpMethod,
   type ResourceAction,
   type ResourceOptions,

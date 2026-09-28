@@ -30,14 +30,20 @@ test("newProject copies the template and replaces __APP_NAME__", async () => {
       name: string
     }
     assert.equal(pkg.name, "my_app")
-    assert.match(await readFile(join(result.dir, "config", "app.ts"), "utf8"), /name: "my_app"/)
+    const appConfig = await readFile(join(result.dir, "config", "app.ts"), "utf8")
+    assert.match(appConfig, /name: "my_app"/)
+    assert.match(appConfig, /csrf: \{ enabled: true \}/)
     assert.deepEqual(await findLeftovers(result.dir), [])
 
     const env = await readFile(join(result.dir, ".env"), "utf8")
     assert.match(env, /^PORT=3000$/m)
     assert.match(env, /^JOT_SECRET=[0-9a-f]{64}$/m)
+    const secret = /^JOT_SECRET=([0-9a-f]{64})$/m.exec(env)?.[1]
+    assert.ok(secret)
+    assert.notEqual(secret, "dev-secret-change-me")
     assert.doesNotMatch(env, /dev-secret-change-me/)
-    assert.ok(existsSync(join(result.dir, ".env.example")))
+    const envExample = await readFile(join(result.dir, ".env.example"), "utf8")
+    assert.doesNotMatch(envExample, /^JOT_SECRET=/m)
     assert.ok(existsSync(join(result.dir, "tsconfig.json")))
     assert.ok(existsSync(join(result.dir, "drizzle.config.ts")))
     assert.ok(existsSync(join(result.dir, "app", "controllers", "home_controller.ts")))

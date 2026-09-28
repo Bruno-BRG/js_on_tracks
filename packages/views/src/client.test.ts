@@ -11,6 +11,8 @@ class FakeFormData extends FormData {
     super()
     this.jotForm = form
     this.set("title", "fake")
+    const csrfToken = (form as { csrfToken?: string }).csrfToken
+    if (csrfToken !== undefined) this.set("_csrf", csrfToken)
   }
 }
 
@@ -52,9 +54,17 @@ function createHarness(options: HarnessOptions = {}) {
   const form = {
     tagName: "FORM",
     action: options.action ?? "http://localhost/posts",
+    csrfToken: attrs.csrfToken,
     getAttribute: (name: string): string | null => attrs[name] ?? null,
-    querySelector: (_selector: string): unknown =>
-      attrs._method ? { value: attrs._method } : null,
+    querySelector: (selector: string): unknown => {
+      if (selector === 'input[name="_csrf"]') {
+        return attrs.csrfToken ? { value: attrs.csrfToken } : null
+      }
+      if (selector === 'input[name="_method"]') {
+        return attrs._method ? { value: attrs._method } : null
+      }
+      return null
+    },
     submit: (): void => {
       nativeSubmits += 1
     },
@@ -118,6 +128,7 @@ function createHarness(options: HarnessOptions = {}) {
     fetchCalls,
     dispatched,
     warnings,
+    location: windowStub.location,
     nativeSubmits: (): number => nativeSubmits,
   }
 }
@@ -150,10 +161,12 @@ test("intercepta o submit, faz fetch e aplica innerHTML", async () => {
   assert.equal(call.url, "http://localhost/posts")
   assert.equal(call.init.method, "POST")
   assert.equal(call.init.credentials, "same-origin")
+  assert.equal(new Headers(call.init.headers).has("Content-Type"), false)
   const body = call.init.body
   assert.ok(body instanceof FakeFormData)
   assert.equal(body.jotForm, harness.form)
   assert.equal(body.get("title"), "fake")
+  assert.equal(new Headers(call.init.headers).get("X-CSRF-Token"), null)
   assert.equal(element.innerHTML, "<p>ok</p>")
   assert.deepEqual(harness.dispatched, ["jot:load"])
   assert.equal(harness.nativeSubmits(), 0)
@@ -170,6 +183,25 @@ test("usa o campo oculto _method quando não há jot-method", async () => {
 
   assert.equal(harness.fetchCalls.length, 1)
   assert.equal(harness.fetchCalls[0].init.method, "PUT")
+})
+
+test("envia _csrf também no header e mantém o campo no FormData", async () => {
+  const token = "a".repeat(43)
+  const harness = createHarness({
+    attrs: { "jot-method": "put", "jot-target": "#row", csrfToken: token },
+    target: { innerHTML: "", outerHTML: "" },
+  })
+
+  harness.submit()
+  await flush()
+
+  const call = harness.fetchCalls.at(0)
+  assert.ok(call)
+  assert.equal(new Headers(call.init.headers).get("X-CSRF-Token"), token)
+  assert.equal((call.init.body as FormData).get("_csrf"), token)
+  assert.equal(new Headers(call.init.headers).has("Content-Type"), false)
+  assert.equal(call.init.credentials, "same-origin")
+  assert.equal(call.init.method, "PUT")
 })
 
 test("jot-swap=outerHTML troca o elemento inteiro", async () => {
@@ -230,6 +262,51 @@ test("erro de rede cai no envio nativo", async () => {
       (message) => message.includes("offline") && message.includes("native form submit"),
     ),
   )
+})
+
+test("403 HTML é mostrado no alvo sem fallback nem repetição", async () => {
+  const element: FakeElement = { innerHTML: "", outerHTML: "" }
+  const harness = createHarness({
+    attrs: { "jot-method": "post", "jot-target": "#list" },
+    target: element,
+    response: () =>
+      Promise.resolve(
+        new Response("<h1>Forbidden</h1>", {
+          status: 403,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+      ),
+  })
+
+  harness.submit()
+  await flush()
+
+  assert.equal(harness.fetchCalls.length, 1)
+  assert.equal(element.innerHTML, "<h1>Forbidden</h1>")
+  assert.equal(harness.nativeSubmits(), 0)
+})
+
+test("403 JSON não é inserido no alvo nem repetido como form nativo", async () => {
+  const element: FakeElement = { innerHTML: "", outerHTML: "" }
+  const harness = createHarness({
+    attrs: { "jot-method": "post", "jot-target": "#list" },
+    target: element,
+    response: () =>
+      Promise.resolve(
+        new Response('{"error":"forbidden"}', {
+          status: 403,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+  })
+
+  harness.submit()
+  await flush()
+
+  assert.equal(element.innerHTML, "")
+  assert.equal(harness.location.href, "http://localhost/posts/new")
+  assert.equal(harness.nativeSubmits(), 0)
+  assert.equal(harness.fetchCalls.length, 1)
 })
 
 test("resposta não-HTML não é injetada no alvo", async () => {

@@ -64,13 +64,22 @@ export const CLIENT_SCRIPT = `/* JOT — jot-* forms (servido em /_jot/jot.js). 
     var data = new FormData(form);
     var submitter = event.submitter;
     if (submitter && submitter.name) data.append(submitter.name, submitter.value);
+    var tokenField = form.querySelector('input[name="_csrf"]');
+    var token = tokenField && typeof tokenField.value === "string" ? tokenField.value : "";
+    var headers = {};
+    if (token) headers["X-CSRF-Token"] = token;
+    var receivedResponse = false;
+    var responseStatus = 0;
 
     fetch(form.action || window.location.href, {
       method: method.toUpperCase(),
       body: data,
-      credentials: "same-origin"
+      credentials: "same-origin",
+      headers: headers
     })
       .then(function (response) {
+        receivedResponse = true;
+        responseStatus = response.status;
         var type = String(response.headers.get("content-type") || "").toLowerCase();
         if (type && type.indexOf("html") === -1) {
           window.location.href = response.url || window.location.href;
@@ -85,6 +94,7 @@ export const CLIENT_SCRIPT = `/* JOT — jot-* forms (servido em /_jot/jot.js). 
         }
       })
       .catch(function (error) {
+        if (receivedResponse && responseStatus === 403) return;
         jotFallback(form, error);
       });
   });
