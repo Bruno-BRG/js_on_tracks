@@ -1,2 +1,1 @@
-// TODO: implementação do pacote create-jot
-export {}
+export { type CreateJotOptions, type CreateJotOutput, runCreateJot } from "./main"

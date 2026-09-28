@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/cli": "*"
+    "@jot/cli": "*",
+    "tsx": "^4.23.15"
   },
   "bin": {
     "create-jot": "bin/create-jot.js"

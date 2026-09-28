@@ -13,3 +13,9 @@ npm run console    # REPL com db, models e paths
 - Schema do banco: `db/schema.ts` (+ `npm run generate` para criar a migration)
 - Controllers: `app/controllers`
 - Views: `app/views` (JSX, SSR)
+
+## Development inside the JOT monorepo (M1)
+
+`jot-framework` is not published on npm yet. Until it is, create apps with
+`jot new <name> --no-install` and run `npm install` from the repository root so the
+workspace packages resolve. Published packages arrive in a later milestone.

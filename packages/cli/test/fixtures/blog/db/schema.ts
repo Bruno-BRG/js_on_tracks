@@ -4,6 +4,6 @@ export const posts = table("posts", {
   id: id(),
   title: string().notNull(),
   body: text(),
-  published: boolean().default(false),
+  published: boolean().notNull().default(false),
   ...timestamps(),
 })

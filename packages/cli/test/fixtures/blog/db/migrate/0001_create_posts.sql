@@ -3,8 +3,8 @@ create table if not exists posts (
   title text not null,
   body text,
   published integer not null default 0,
-  created_at integer,
-  updated_at integer
+  created_at integer not null,
+  updated_at integer not null
 );
 
 insert into posts (title, body, published, created_at, updated_at)
