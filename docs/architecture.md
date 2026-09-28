@@ -129,7 +129,7 @@ Regras de migration:
 - Down: tudo após a linha `-- jot:down` é o SQL de rollback. Sem a seção, `rollback` falha com erro
   didático ("migration X não define -- jot:down; crie a seção ou edite o banco manualmente").
 - Migrations rodam no **driver cru**, não via Drizzle.
-- `createDatabase` com `url` postgres → erro didático "Postgres chega no M3".
+- `createDatabase` com `url` postgres → erro didático "Postgres support arrives in M3; use SQLite for now."
 
 `Driver` (interface pública, `@jot/db`):
 ```ts
@@ -179,7 +179,7 @@ await post.destroy()                // delete
 
 Regras:
 - Só usa o banco via `getDefaultDatabase()` (setado pelo `@jot/core` no boot). Se não houver banco,
-  erro didático ("nenhum banco configurado; defina config/database.ts ou chame setDefaultDatabase").
+  erro didático ("No database configured; define config/database.ts or call setDefaultDatabase().").
 - `save()` valida antes de persistir; `errors` limpa a cada validação.
 - Validações M1: `presence`, `minLength(n)`, `maxLength(n)`, `format(regex, message?)`.
 - `where`/`findBy` aceitam apenas igualdade por campo; callback recebe as colunas Drizzle para
