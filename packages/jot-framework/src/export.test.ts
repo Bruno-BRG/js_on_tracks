@@ -1,5 +1,5 @@
-import { test } from "node:test"
 import assert from "node:assert/strict"
+import { test } from "node:test"
 import * as jot from "./index"
 
 test("jot-framework reúne a API pública dos quatro pacotes", () => {

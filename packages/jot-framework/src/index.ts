@@ -11,10 +11,9 @@
  */
 
 export * from "@jot/core"
-export * from "@jot/orm"
-export * from "@jot/views"
-export * from "@jot/db"
-
 // `AnyTable` existe nos dois pacotes (db: união de tabelas Drizzle; orm: alias interno).
 // No import único, vale a definição do `@jot/db` — a que o usuário vê ao chamar `table()`.
 export type { AnyTable } from "@jot/db"
+export * from "@jot/db"
+export * from "@jot/orm"
+export * from "@jot/views"
