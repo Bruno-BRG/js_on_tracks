@@ -18,6 +18,5 @@ formatos de arquivo e convenções estão definidos lá.
 6. **Erros didáticos**: toda falha prevista deve dizer o que fazer
    (ex.: "View 'posts/index' not found. Expected file: app/views/posts/index.tsx. Restart `jot server`
    to regenerate the manifest."). Mensagens ao usuário em **inglês**.
-7. **Não commite** no git. Não crie arquivos fora do seu escopo.
-8. **Ao terminar**, responda: (a) arquivos criados, (b) comandos executados com resultado,
+7. **Ao terminar**, responda: (a) arquivos criados, (b) comandos executados com resultado,
    (c) pendências/bugs conhecidos, (d) desvios do contrato (com justificativa).

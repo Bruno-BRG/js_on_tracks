@@ -51,6 +51,11 @@ export async function newProject(
   if (folderName.length === 0) {
     throw new CliError("Missing app name. Usage: `jot new <name> [--no-install]`.")
   }
+  if (folderName === "." || folderName === "..") {
+    throw new CliError(
+      `Invalid app name "${folderName}". \`jot new\` creates a new folder; run it from the parent directory with a name such as \`jot new blog\`.`,
+    )
+  }
 
   const dir = resolve(cwd, folderName)
   const base = basename(dir)

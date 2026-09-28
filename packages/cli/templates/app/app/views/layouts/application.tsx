@@ -9,7 +9,9 @@ export default function ApplicationLayout(props: { children?: unknown; title?: s
       </head>
       <body>
         <header class="topbar">
-          <a href="/" class="brand">__APP_NAME__</a>
+          <a href="/" class="brand">
+            __APP_NAME__
+          </a>
           <span class="tag">powered by JOT</span>
         </header>
         <main class="container">{props.children}</main>

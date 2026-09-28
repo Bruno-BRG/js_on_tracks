@@ -1,4 +1,4 @@
-import { Model, presence, minLength } from "jot-framework"
+import { Model, minLength, presence } from "jot-framework"
 import { posts } from "../../db/schema.ts"
 
 /**

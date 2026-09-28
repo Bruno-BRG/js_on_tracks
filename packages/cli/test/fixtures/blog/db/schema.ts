@@ -1,4 +1,4 @@
-import { table, id, string, text, boolean, timestamps } from "jot-framework"
+import { boolean, id, string, table, text, timestamps } from "jot-framework"
 
 export const posts = table("posts", {
   id: id(),

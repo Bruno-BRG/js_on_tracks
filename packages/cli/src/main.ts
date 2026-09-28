@@ -4,6 +4,7 @@ import { runDbGenerate, runDbMigrate, runDbRollback } from "./commands/db"
 import { runNew } from "./commands/new"
 import { runRoutes } from "./commands/routes"
 import { runServer } from "./commands/server"
+import { runGenerate } from "./generate/index"
 import { CliError, cliVersion, log, printError } from "./output"
 
 type CommandRunner = (parsed: ParsedArgv) => Promise<number>
@@ -11,6 +12,8 @@ type CommandRunner = (parsed: ParsedArgv) => Promise<number>
 /** Ordem fixa do help e das sugestões de comando desconhecido. */
 const COMMANDS: Record<string, CommandRunner> = {
   new: runNew,
+  generate: runGenerate,
+  g: runGenerate,
   server: runServer,
   "db:generate": runDbGenerate,
   "db:migrate": runDbMigrate,
@@ -95,6 +98,9 @@ function printHelp(): void {
     "",
     "Usage:",
     "  jot new <name> [--no-install]   Create a new app in <name>/",
+    "  jot generate model <Name> [field:type[!] ...] [--no-db-generate]      Add a model and its table",
+    "  jot generate scaffold <Name> [field:type[!] ...] [--no-db-generate]   Add model, controller, views and routes",
+    "  jot g model|scaffold <Name> [field:type[!] ...] [--no-db-generate]   Alias for jot generate",
     "  jot server                      Start the dev server (watch mode)",
     "  jot db:generate                 Generate a migration from db/schema.ts",
     "  jot db:migrate                  Apply pending migrations",
