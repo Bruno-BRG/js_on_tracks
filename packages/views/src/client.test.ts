@@ -225,7 +225,11 @@ test("erro de rede cai no envio nativo", async () => {
 
   assert.equal(harness.nativeSubmits(), 1)
   assert.deepEqual(harness.dispatched, [])
-  assert.ok(harness.warnings.some((message) => message.includes("offline")))
+  assert.ok(
+    harness.warnings.some(
+      (message) => message.includes("offline") && message.includes("native form submit"),
+    ),
+  )
 })
 
 test("resposta não-HTML não é injetada no alvo", async () => {

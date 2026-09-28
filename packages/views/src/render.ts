@@ -106,30 +106,31 @@ async function renderChild(value: unknown, seen: Set<object>): Promise<string> {
       return String(value)
   }
   if (Array.isArray(value)) {
-    let html = ""
-    for (const child of value) {
-      html += await renderChild(child, seen)
+    if (seen.has(value)) throw cycleError("array")
+    seen.add(value)
+    try {
+      let html = ""
+      for (const child of value) {
+        html += await renderChild(child, seen)
+      }
+      return html
+    } finally {
+      seen.delete(value)
     }
-    return html
   }
   if (typeof value === "object") {
     if (isRaw(value)) return value[RAW_MARKER]
     if (isVNode(value)) return renderVNode(value, seen)
   }
   throw new TypeError(
-    `renderToString recebeu um valor não renderizável: ${describeValue(value)}. ` +
-      `Use JSX/VNode, array de filhos, string, número, raw("...") ` +
-      `ou null/undefined/false (que são ignorados).`,
+    `renderToString received a value it cannot render: ${describeValue(value)}. ` +
+      `Use JSX/VNode, an array of children, a string, a number, raw("...") ` +
+      `or null/undefined/false (which are ignored).`,
   )
 }
 
 async function renderVNode(vnode: VNode, seen: Set<object>): Promise<string> {
-  if (seen.has(vnode)) {
-    throw new Error(
-      `VNode cíclico detectado: o mesmo nó apareceu dentro da própria renderização. ` +
-        `Verifique o "children" do componente que o produziu.`,
-    )
-  }
+  if (seen.has(vnode)) throw cycleError("VNode")
   seen.add(vnode)
   try {
     const { type, props } = vnode
@@ -142,9 +143,9 @@ async function renderVNode(vnode: VNode, seen: Set<object>): Promise<string> {
       return await renderComponent(() => type.render(props), renderObjectName(type), seen)
     }
     throw new TypeError(
-      `VNode com "type" inválido: ${describeValue(type)}. ` +
-        `Use uma tag string (ex.: "div"), um componente de função (ex.: HomeIndex), ` +
-        `um objeto com render() ou <Fragment>.`,
+      `VNode with an invalid "type": ${describeValue(type)}. ` +
+        `Use a string tag (e.g. "div"), a function component (e.g. HomeIndex), ` +
+        `an object with render(), or <Fragment>.`,
     )
   } finally {
     seen.delete(vnode)
@@ -154,12 +155,22 @@ async function renderVNode(vnode: VNode, seen: Set<object>): Promise<string> {
 async function renderElement(tag: string, props: Props, seen: Set<object>): Promise<string> {
   if (!TAG_NAME.test(tag)) {
     throw new TypeError(
-      `Nome de tag inválido: ${JSON.stringify(tag)}. ` +
-        `Use uma tag HTML válida (ex.: "div", "my-widget", "svg:path").`,
+      `Invalid tag name: ${JSON.stringify(tag)}. ` +
+        `Use a valid HTML tag (e.g. "div", "my-widget", "svg:path").`,
     )
   }
   const attributes = renderAttributes(props)
-  if (VOID_ELEMENTS.has(tag.toLowerCase())) return `<${tag}${attributes}>`
+  if (VOID_ELEMENTS.has(tag.toLowerCase())) {
+    if (hasSignificantChildren(props.children)) {
+      // Consome rejeições pendentes para nunca deixar uma promise sem handler.
+      consumeRejections(props.children)
+      throw new TypeError(
+        `<${tag}> is a void element and must not have children (received ${describeValue(props.children)}). ` +
+          `Remove the children or use a non-void element such as "div" or "span".`,
+      )
+    }
+    return `<${tag}${attributes}>`
+  }
   const children = await renderChild(props.children, seen)
   return `<${tag}${attributes}>${children}</${tag}>`
 }
@@ -174,7 +185,7 @@ async function renderComponent(
     output = await run()
   } catch (error) {
     const message = error instanceof Error ? error.message : describeValue(error)
-    throw new Error(`Erro ao renderizar o componente ${name}: ${message}`, { cause: error })
+    throw new Error(`Failed to render component ${name}: ${message}`, { cause: error })
   }
   return renderChild(output, seen)
 }
@@ -187,8 +198,8 @@ function renderAttributes(props: Props): string {
     if (name.startsWith("on")) continue // SSR não tem eventos: handlers são ignorados.
     if (!ATTRIBUTE_NAME.test(name)) {
       throw new TypeError(
-        `Nome de atributo inválido: ${JSON.stringify(name)}. ` +
-          `Use um nome de atributo HTML válido (ex.: "class", "data-id", "aria-label").`,
+        `Invalid attribute name: ${JSON.stringify(name)}. ` +
+          `Use a valid HTML attribute name (e.g. "class", "data-id", "aria-label").`,
       )
     }
     const value = props[name]
@@ -206,8 +217,8 @@ function renderAttributes(props: Props): string {
     }
     if (name === "dangerouslySetInnerHTML") {
       throw new TypeError(
-        `"dangerouslySetInnerHTML" não existe no @jot/views. ` +
-          `Para HTML cru use raw() dentro de children: <div>{raw("<b>ok</b>")}</div>.`,
+        `"dangerouslySetInnerHTML" is not part of @jot/views. ` +
+          `For raw HTML, use raw() inside children: <div>{raw("<b>ok</b>")}</div>.`,
       )
     }
     html += renderAttribute(name === "htmlFor" ? "for" : name, value)
@@ -230,8 +241,8 @@ function renderAttribute(name: string, value: unknown): string {
     return text.length === 0 ? "" : ` ${name}="${escapeAttribute(text)}"`
   }
   throw new TypeError(
-    `O atributo "${name}" recebeu ${describeValue(value)}; esperado string, número, ` +
-      `booleano ou array. Converta o valor (ex.: JSON.stringify(valor)) antes de passar.`,
+    `Attribute "${name}" received ${describeValue(value)}; expected a string, number, ` +
+      `boolean or array. Convert the value first (e.g. JSON.stringify(value)).`,
   )
 }
 
@@ -252,8 +263,8 @@ function styleText(value: unknown): string | null {
   if (typeof value === "string") return value
   if (typeof value !== "object" || Array.isArray(value)) {
     throw new TypeError(
-      `O atributo "style" espera um objeto (ex.: style={{ color: "red" }}) ou uma string CSS, ` +
-        `mas recebeu ${describeValue(value)}.`,
+      `The "style" attribute expects an object (e.g. style={{ color: "red" }}) or a CSS string, ` +
+        `but received ${describeValue(value)}.`,
     )
   }
   let css = ""
@@ -278,7 +289,7 @@ function cssValue(property: string, value: unknown): string {
   }
   if (typeof value === "string" || typeof value === "bigint") return String(value)
   throw new TypeError(
-    `style.${property} recebeu ${describeValue(value)}; esperado string ou número.`,
+    `style.${property} received ${describeValue(value)}; expected a string or a number.`,
   )
 }
 
@@ -301,11 +312,40 @@ function isRenderObject(value: unknown): value is RenderObject {
 
 function componentName(component: { name?: string }): string {
   const name = component.name
-  return name && name.length > 0 ? name : "(anônimo)"
+  return name && name.length > 0 ? name : "(anonymous)"
 }
 
 function renderObjectName(value: RenderObject): string {
   const ctor = value.constructor as { name?: string } | undefined
   const name = ctor?.name
-  return name && name !== "Object" ? `instância de ${name}` : "objeto com render()"
+  return name && name !== "Object" ? `instance of ${name}` : "object with render()"
+}
+
+/** `true` quando há conteúdo real em `children` (ignora null/undefined/false/array vazio/string vazia). */
+function hasSignificantChildren(children: unknown): boolean {
+  if (children === null || children === undefined || children === false || children === true) {
+    return false
+  }
+  if (typeof children === "string") return children.length > 0
+  if (Array.isArray(children)) return children.some((child) => hasSignificantChildren(child))
+  return true
+}
+
+/** Anexa handlers a promessas já criadas na árvore, para não deixar rejeições pendentes. */
+function consumeRejections(value: unknown): void {
+  if (isThenable(value)) {
+    value.then(undefined, () => undefined)
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const child of value) consumeRejections(child)
+  }
+}
+
+/** Erro didático para ciclos em VNodes e arrays. */
+function cycleError(kind: "VNode" | "array"): Error {
+  return new Error(
+    `Cyclic render detected: the same ${kind} is rendered inside itself. ` +
+      `Check the "children" of the component or the array you passed.`,
+  )
 }

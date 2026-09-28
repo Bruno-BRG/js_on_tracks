@@ -198,6 +198,8 @@ Regras:
 - Props especiais: `class`/`className`, `style` como objeto, `raw(string)` para HTML cru
   (`dangerouslySetInnerHTML` não é necessário).
 - `Fragment` disponível para `<>...</>`.
+- Elementos void (`br`, `img`, `input`, ...) não fecham nem aceitam filhos; children significativos
+  neles geram erro didático (children vazios/nulos são ignorados).
 - Erros de componente propagam com mensagem clara (sem stack perdida).
 - `CLIENT_SCRIPT: string` — o JS do cliente (atributos `jot-*`), servido pelo core em `/_jot/jot.js`.
   M1: intercepta submit de `<form jot-method="post|put|patch|delete" jot-target="<seletor>" jot-swap="innerHTML|outerHTML" jot-confirm>`,

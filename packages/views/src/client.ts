@@ -38,7 +38,7 @@ export const CLIENT_SCRIPT = `/* JOT — jot-* forms (servido em /_jot/jot.js). 
 
   function jotFallback(form, error) {
     var message = error && error.message ? error.message : String(error);
-    console.warn("JOT: não foi possível enviar via fetch (" + message + "); usando o envio nativo do formulário.");
+    console.warn("JOT: could not submit via fetch (" + message + "); falling back to the native form submit.");
     form.submit();
   }
 

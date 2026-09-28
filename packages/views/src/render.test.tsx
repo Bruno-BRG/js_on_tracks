@@ -99,7 +99,7 @@ test("key/ref/children não viram atributos", async () => {
   assert.equal(await renderToString(jsx("li", { children: "x", key: "k", ref: {} })), `<li>x</li>`)
 })
 
-test("void elements não fecham nem recebem children", async () => {
+test("void elements não fecham nem recebem children significativos", async () => {
   const html = await renderToString(
     <div>
       <br />
@@ -109,13 +109,61 @@ test("void elements não fecham nem recebem children", async () => {
   )
   assert.equal(html, `<div><br><img src="/x.png" alt=""><hr></div>`)
   assert.equal(
-    await renderToString(jsx("img", { src: "/x.png", alt: "", children: "texto" })),
-    `<img src="/x.png" alt="">`,
-  )
-  assert.equal(
     await renderToString(<input type="text" value={0} maxLength={5} required />),
     `<input type="text" value="0" maxLength="5" required="">`,
   )
+
+  const text = await rejection(
+    renderToString(jsx("img", { src: "/x.png", alt: "", children: "texto" })),
+  )
+  assert.ok(text instanceof TypeError)
+  assert.match(text.message, /<img> is a void element/)
+  assert.match(text.message, /must not have children/)
+  assert.match(text.message, /non-void element/)
+
+  const node = await rejection(
+    renderToString(jsx("br", { children: jsx("span", { children: "x" }) })),
+  )
+  assert.match(node.message, /<br> is a void element/)
+})
+
+test('void element ignora children vazios (null/undefined/false/[]/"")', async () => {
+  const empty = [
+    jsx("br", { children: null }),
+    jsx("br", { children: undefined }),
+    jsx("br", { children: false }),
+    jsx("br", { children: true }),
+    jsx("br", { children: [] }),
+    jsx("br", { children: "" }),
+    jsx("br", { children: [null, [], "", false] }),
+  ]
+  for (const vnode of empty) {
+    assert.equal(await renderToString(vnode), "<br>")
+  }
+})
+
+test("rejeição pendente em child de void element não vira unhandledRejection", async () => {
+  const unhandled: unknown[] = []
+  const onUnhandled = (reason: unknown): void => {
+    unhandled.push(reason)
+  }
+  process.on("unhandledRejection", onUnhandled)
+  try {
+    const error = await rejection(
+      renderToString(
+        jsx("img", {
+          src: "/x.png",
+          alt: "",
+          children: Promise.reject(new Error("boom-no-img-child")),
+        }),
+      ),
+    )
+    assert.match(error.message, /<img> is a void element/)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.deepEqual(unhandled, [])
+  } finally {
+    process.off("unhandledRejection", onUnhandled)
+  }
 })
 
 test("Fragment renderiza sem wrapper", async () => {
@@ -167,7 +215,7 @@ test("raw() injeta HTML cru", async () => {
     `<div><b>cru & sem escape</b></div>`,
   )
   assert.equal(await renderToString(raw("<hr>")), "<hr>")
-  assert.throws(() => raw(42 as never), /raw\(\) espera uma string/)
+  assert.throws(() => raw(42 as never), /raw\(\) expects an HTML string/)
 })
 
 test("children variados: array, número, null, false", async () => {
@@ -188,19 +236,19 @@ test("children variados: array, número, null, false", async () => {
 test("type inválido gera erro didático", async () => {
   const number = await rejection(renderToString(jsx(42, {})))
   assert.ok(number instanceof TypeError)
-  assert.match(number.message, /"type" inválido/)
-  assert.match(number.message, /número 42/)
+  assert.match(number.message, /invalid "type"/)
+  assert.match(number.message, /number 42/)
   assert.match(number.message, /HomeIndex/)
 
   const nothing = await rejection(renderToString(jsx(null, {})))
   assert.match(nothing.message, /null/)
 
   const object = await rejection(renderToString(jsx({ foo: 1 }, {})))
-  assert.match(object.message, /objeto/)
+  assert.match(object.message, /object/)
   assert.match(object.message, /render\(\)/)
 
   const child = await rejection(renderToString({ hello: "world" }))
-  assert.match(child.message, /não renderizável/)
+  assert.match(child.message, /cannot render/)
   assert.match(child.message, /raw\("/)
 })
 
@@ -209,7 +257,7 @@ test("erro dentro de componente preserva a causa", async () => {
     throw new Error("falha interna")
   }
   const error = await rejection(renderToString(<Broken />))
-  assert.match(error.message, /componente Broken/)
+  assert.match(error.message, /component Broken/)
   assert.match(error.message, /falha interna/)
   assert.ok(error.cause instanceof Error)
   assert.equal((error.cause as Error).message, "falha interna")
@@ -220,18 +268,18 @@ test("rejeição de componente async preserva a causa", async () => {
     throw new Error("rejeitou depois do await")
   }
   const error = await rejection(renderToString(<AsyncBroken />))
-  assert.match(error.message, /componente AsyncBroken/)
+  assert.match(error.message, /component AsyncBroken/)
   assert.ok(error.cause instanceof Error)
   assert.equal((error.cause as Error).message, "rejeitou depois do await")
 })
 
 test("atributo com objeto é erro didático; style inválido também", async () => {
   const attribute = await rejection(renderToString(<div data-config={{ a: 1 }} />))
-  assert.match(attribute.message, /atributo "data-config"/)
+  assert.match(attribute.message, /Attribute "data-config"/)
   assert.match(attribute.message, /JSON\.stringify/)
 
   const style = await rejection(renderToString(<div style={42 as never} />))
-  assert.match(style.message, /"style" espera um objeto/)
+  assert.match(style.message, /"style" attribute expects an object/)
 })
 
 test("dangerouslySetInnerHTML aponta para raw()", async () => {
@@ -246,16 +294,70 @@ test("detecta VNode cíclico", async () => {
   const node = jsx("div", {})
   node.props.children = node
   const error = await rejection(renderToString(node))
-  assert.match(error.message, /cíclico/i)
+  assert.match(error.message, /Cyclic render detected/)
+  assert.match(error.message, /VNode is rendered inside itself/)
+})
+
+test("detecta ciclo em array", async () => {
+  const list: unknown[] = []
+  list.push(list)
+  const error = await rejection(renderToString(list))
+  assert.match(error.message, /Cyclic render detected/)
+  assert.match(error.message, /array is rendered inside itself/)
+
+  const inner: unknown[] = []
+  const outer: unknown[] = [inner]
+  inner.push(outer)
+  const nested = await rejection(renderToString(outer))
+  assert.match(nested.message, /Cyclic render detected/)
+})
+
+test("array repetido (não cíclico) renderiza as duas vezes", async () => {
+  const row = [<span key="a">x</span>]
+  assert.equal(
+    await renderToString(<div>{[row, row]}</div>),
+    `<div><span>x</span><span>x</span></div>`,
+  )
 })
 
 test("nome de tag inválido é rejeitado", async () => {
   const error = await rejection(renderToString(jsx("div>", {})))
-  assert.match(error.message, /Nome de tag inválido/)
+  assert.match(error.message, /Invalid tag name/)
 })
 
 test("nome de atributo inválido é rejeitado", async () => {
   const props = { 'x" onmouseover="alert(1)': "y" }
   const error = await rejection(renderToString(jsx("div", props)))
-  assert.match(error.message, /Nome de atributo inválido/)
+  assert.match(error.message, /Invalid attribute name/)
+})
+
+test("mensagens autorais são em inglês (ASCII, sem acentos)", async () => {
+  const badAttributeName = { 'x" onmouseover="alert(1)': "y" }
+  const cyclic: unknown[] = []
+  cyclic.push(cyclic)
+  const cases: Promise<unknown>[] = [
+    renderToString(jsx(42, {})),
+    renderToString(jsx(null, {})),
+    renderToString(jsx("div>", {})),
+    renderToString(jsx("div", badAttributeName)),
+    renderToString(jsx("br", { children: "x" })),
+    renderToString(jsx("div", { title: {} })),
+    renderToString(jsx("div", { style: 42 as never })),
+    renderToString(jsx("div", { style: { opacity: true } })),
+    renderToString(jsx("div", { dangerouslySetInnerHTML: { __html: "x" } })),
+    renderToString(cyclic),
+  ]
+  for (const promise of cases) {
+    const error = await rejection(promise)
+    assert.doesNotMatch(error.message, /\P{ASCII}/u, `mensagem não-inglesa: ${error.message}`)
+  }
+
+  let rawError: unknown
+  try {
+    raw(42 as never)
+  } catch (error) {
+    rawError = error
+  }
+  assert.ok(rawError instanceof Error, "raw() should have thrown")
+  assert.doesNotMatch(rawError.message, /\P{ASCII}/u)
 })

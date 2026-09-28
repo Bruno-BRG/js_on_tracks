@@ -67,8 +67,8 @@ export type Component = (props: Props) => Renderable
 export function raw(html: string): RawHtml {
   if (typeof html !== "string") {
     throw new TypeError(
-      `raw() espera uma string de HTML, mas recebeu ${describeValue(html)}. ` +
-        `Ex.: raw("<strong>ok</strong>").`,
+      `raw() expects an HTML string, but received ${describeValue(html)}. ` +
+        `Example: raw("<strong>ok</strong>").`,
     )
   }
   return { [RAW_MARKER]: html }
@@ -81,38 +81,38 @@ export function isRaw(value: unknown): value is RawHtml {
 
 /**
  * Descreve um valor para mensagens de erro didáticas
- * (ex.: `string "x"`, `número 42`, `objeto [object Object] com chaves [a, b]`).
+ * (ex.: `string "x"`, `number 42`, `object [object Object] with keys [a, b]`).
  */
 export function describeValue(value: unknown): string {
   if (value === null) return "null"
   if (value === undefined) return "undefined"
   switch (typeof value) {
     case "string": {
-      const text = value.length > 40 ? `${value.slice(0, 40)}…` : value
+      const text = value.length > 40 ? `${value.slice(0, 40)}...` : value
       return `string ${JSON.stringify(text)}`
     }
     case "number":
     case "bigint": {
-      const label = typeof value === "number" ? "número" : "bigint"
+      const label = typeof value === "number" ? "number" : "bigint"
       return `${label} ${String(value)}`
     }
     case "boolean":
-      return `booleano ${String(value)}`
+      return `boolean ${String(value)}`
     case "function": {
       const name = (value as { name?: string }).name
-      return `função ${name && name.length > 0 ? name : "(anônima)"}`
+      return `function ${name && name.length > 0 ? name : "(anonymous)"}`
     }
     case "symbol":
       return `symbol ${String(value)}`
     default: {
       if (Array.isArray(value)) {
-        return `array de ${value.length} ${value.length === 1 ? "item" : "itens"}`
+        return `array of ${value.length} ${value.length === 1 ? "item" : "items"}`
       }
       const tag = Object.prototype.toString.call(value)
       const keys = Object.keys(value as Record<string, unknown>)
-      if (keys.length === 0) return `objeto ${tag}`
+      if (keys.length === 0) return `object ${tag}`
       const shown = keys.slice(0, 5).join(", ")
-      return `objeto ${tag} com chaves [${shown}${keys.length > 5 ? ", …" : ""}]`
+      return `object ${tag} with keys [${shown}${keys.length > 5 ? ", ..." : ""}]`
     }
   }
 }
