@@ -39,6 +39,7 @@ A JOT 1.0 inclui o generator de apps, generators de model e scaffold, rotas REST
 - Português brasileiro: [README.pt-BR.md](README.pt-BR.md)
 - Contrato técnico: [docs/architecture.md](docs/architecture.md)
 - Processo de release: [docs/releasing.pt-BR.md](docs/releasing.pt-BR.md)
+- Tutorial: [docs/primeiros-passos.md](docs/primeiros-passos.md)
 - App de exemplo: [examples/blog](examples/blog/README.md)
 
 ## Licença
