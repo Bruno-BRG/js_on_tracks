@@ -1,4 +1,4 @@
-// @jot/db — schema DSL, Driver SQLite (node:sqlite), createDatabase e migrations.
+// @js_on_tracks/db — schema DSL, Driver SQLite (node:sqlite), createDatabase e migrations.
 // Contrato completo em docs/architecture.md §4.1.
 
 export {

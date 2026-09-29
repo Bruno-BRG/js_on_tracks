@@ -4,13 +4,13 @@ import { getReleaseRange, readPackageManifest } from "./release-range.mjs"
 
 const { baseSha, headSha } = getReleaseRange()
 const packages = [
-  ["@jot/cli", "packages/cli/package.json"],
-  ["@jot/core", "packages/core/package.json"],
+  ["@js_on_tracks/cli", "packages/cli/package.json"],
+  ["@js_on_tracks/core", "packages/core/package.json"],
   ["create-jot", "packages/create-jot/package.json"],
-  ["@jot/db", "packages/db/package.json"],
+  ["@js_on_tracks/db", "packages/db/package.json"],
   ["jot-framework", "packages/jot-framework/package.json"],
-  ["@jot/orm", "packages/orm/package.json"],
-  ["@jot/views", "packages/views/package.json"],
+  ["@js_on_tracks/orm", "packages/orm/package.json"],
+  ["@js_on_tracks/views", "packages/views/package.json"],
 ]
 
 const changed = packages.filter(([, file]) => {

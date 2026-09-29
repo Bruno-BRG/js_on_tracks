@@ -1,4 +1,4 @@
-# @jot/core
+# @js_on_tracks/core
 
 Runtime HTTP da JOT: boot do app, definições de rota, controllers, sessões assinadas, verificações CSRF, arquivos estáticos e ciclo de vida do servidor. A maioria dos apps deve importar essas APIs de `jot-framework`.
 

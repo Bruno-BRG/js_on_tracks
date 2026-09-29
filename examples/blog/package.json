@@ -18,7 +18,7 @@
     "jot-framework": "^1.0.0"
   },
   "devDependencies": {
-    "@jot/cli": "^1.0.0",
+    "@js_on_tracks/cli": "^1.0.0",
     "@types/node": "^26.6.3",
     "drizzle-kit": "^0.31.11",
     "tsx": "^4.23.15",

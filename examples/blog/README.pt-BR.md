@@ -1,6 +1,6 @@
 # Exemplo JOT Blog
 
-Um app pequeno com JOT 1.0 que demonstra um model Post e um scaffold CRUD gerado com os pacotes públicos `jot-framework` e `@jot/cli`.
+Um app pequeno com JOT 1.0 que demonstra um model Post e um scaffold CRUD gerado com os pacotes públicos `jot-framework` e `@js_on_tracks/cli`.
 
 ## Execute o app
 

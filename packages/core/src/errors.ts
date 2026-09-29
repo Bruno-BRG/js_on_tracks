@@ -44,7 +44,7 @@ export interface NotFoundPageOptions {
   message?: string
 }
 
-/** Escapa texto para HTML (`& < > " '`), sem depender de internos do `@jot/views`. */
+/** Escapa texto para HTML (`& < > " '`), sem depender de internos do `@js_on_tracks/views`. */
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

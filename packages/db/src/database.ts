@@ -24,7 +24,7 @@ export interface Database {
   readonly url: string
   readonly root: string
   readonly migrationsDir: string
-  /** Instância Drizzle (sqlite-proxy) usada pelo `@jot/orm`. */
+  /** Instância Drizzle (sqlite-proxy) usada pelo `@js_on_tracks/orm`. */
   readonly drizzle: SqliteRemoteDatabase<Record<string, unknown>>
   /** Aplica as migrations pendentes; devolve os nomes aplicados nesta chamada. */
   migrate(): Promise<string[]>
@@ -185,7 +185,7 @@ export function createDatabase<TSchema extends Record<string, unknown>>(
     : sqliteDriver({ file: url })
 
   // A instância é tipada com o schema do usuário; a API pública expõe o tipo base porque
-  // setDefaultDatabase/getDefaultDatabase são globais — o `@jot/orm` consulta com as próprias
+  // setDefaultDatabase/getDefaultDatabase são globais — o `@js_on_tracks/orm` consulta com as próprias
   // tabelas (builders), não com o API relacional `db.query`.
   const drizzleInstance = drizzle(
     (sql, params, method) => runProxyQuery(driver, sql, params, method),
@@ -209,7 +209,7 @@ export function createDatabase<TSchema extends Record<string, unknown>>(
   return database
 }
 
-/** Define o banco global usado pelo `@jot/orm` (chamado pelo `@jot/core` no boot). */
+/** Define o banco global usado pelo `@js_on_tracks/orm` (chamado pelo `@js_on_tracks/core` no boot). */
 export function setDefaultDatabase(database: Database): void {
   defaultDatabase = database
 }
@@ -218,7 +218,7 @@ export function setDefaultDatabase(database: Database): void {
 export function getDefaultDatabase(): Database {
   if (defaultDatabase === undefined) {
     throw databaseError(
-      "no database configured; define config/database.ts (the `@jot/core` calls " +
+      "no database configured; define config/database.ts (the `@js_on_tracks/core` calls " +
         "setDefaultDatabase on boot) or call setDefaultDatabase(db).",
     )
   }

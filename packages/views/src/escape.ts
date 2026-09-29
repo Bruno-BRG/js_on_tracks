@@ -1,5 +1,5 @@
 /**
- * Escape de HTML do `@jot/views` (contrato §4.3).
+ * Escape de HTML do `@js_on_tracks/views` (contrato §4.3).
  *
  * - Texto entre tags: escapa `&`, `<`, `>`, `"` e `'`.
  * - Valores de atributo (sempre entre aspas duplas): escapa `&`, `"` e `<`.

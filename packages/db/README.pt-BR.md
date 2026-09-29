@@ -1,4 +1,4 @@
-# @jot/db
+# @js_on_tracks/db
 
 Utilitários de banco SQLite para JOT, incluindo DSL de schema tipada, driver nativo `node:sqlite`, criação do banco e runner de migrations SQL.
 

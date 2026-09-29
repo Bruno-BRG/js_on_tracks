@@ -1,4 +1,4 @@
-// Erro didático do `@jot/orm`.
+// Erro didático do `@js_on_tracks/orm`.
 //
 // Mensagens ao usuário em inglês (contrato §1); a dica (`hint`) sempre diz o que fazer.
 

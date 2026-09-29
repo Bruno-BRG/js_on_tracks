@@ -1,5 +1,5 @@
 /**
- * `@jot/cli` — binário `jot`, `collect` (geração de `.jot/**`), `newProject`
+ * `@js_on_tracks/cli` — binário `jot`, `collect` (geração de `.jot/**`), `newProject`
  * (mesma função usada pelo `create-jot`) e os generators (`generate model|scaffold`).
  * Contrato em `docs/architecture.md` §4.6.
  */

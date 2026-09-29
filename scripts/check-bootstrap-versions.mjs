@@ -13,13 +13,13 @@ const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).tr
 assert.equal(head, bootstrapSha, `Checked out ${head}, but bootstrap SHA is ${bootstrapSha}.`)
 
 const publicPackages = [
-  ["@jot/cli", "packages/cli/package.json"],
-  ["@jot/core", "packages/core/package.json"],
+  ["@js_on_tracks/cli", "packages/cli/package.json"],
+  ["@js_on_tracks/core", "packages/core/package.json"],
   ["create-jot", "packages/create-jot/package.json"],
-  ["@jot/db", "packages/db/package.json"],
+  ["@js_on_tracks/db", "packages/db/package.json"],
   ["jot-framework", "packages/jot-framework/package.json"],
-  ["@jot/orm", "packages/orm/package.json"],
-  ["@jot/views", "packages/views/package.json"],
+  ["@js_on_tracks/orm", "packages/orm/package.json"],
+  ["@js_on_tracks/views", "packages/views/package.json"],
 ]
 
 for (const [name, file] of publicPackages) {
@@ -28,6 +28,11 @@ for (const [name, file] of publicPackages) {
     execFileSync("git", ["show", `${bootstrapSha}:${file}`], { encoding: "utf8" }),
   )
   assert.deepEqual(manifest, committed, `${file} differs from bootstrap SHA ${bootstrapSha}.`)
+  assert.equal(
+    manifest.name,
+    name,
+    `Bootstrap publishing requires the manifest name "${name}" in ${file}; found "${manifest.name}".`,
+  )
   assert.equal(
     manifest.version,
     "1.0.0",

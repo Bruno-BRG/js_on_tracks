@@ -1,5 +1,5 @@
-import { renderToString } from "@jot/views"
-import { jsx } from "@jot/views/jsx-runtime"
+import { renderToString } from "@js_on_tracks/views"
+import { jsx } from "@js_on_tracks/views/jsx-runtime"
 import { getViewComponent } from "./registry"
 
 /** Nome do layout default do app. */

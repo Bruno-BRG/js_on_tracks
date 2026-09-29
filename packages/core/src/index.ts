@@ -1,8 +1,8 @@
 /**
- * `@jot/core` — boot, rotas, controllers, sessão e static do JOT
+ * `@js_on_tracks/core` — boot, rotas, controllers, sessão e static do JOT
  * (contrato em `docs/architecture.md` §4.4).
  *
- * Os apps importam de `jot-framework`; `@jot/core` só é usado diretamente pelo
+ * Os apps importam de `jot-framework`; `@js_on_tracks/core` só é usado diretamente pelo
  * CLI (manifest/entry) e pelos testes.
  */
 

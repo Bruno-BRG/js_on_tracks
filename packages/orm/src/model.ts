@@ -45,7 +45,7 @@ const ERRORS = new WeakMap<object, Errors>()
  */
 const SAVING = new WeakMap<object, Promise<boolean>>()
 
-/** Convenção de auditoria do `timestamps()` do `@jot/db` (colunas `createdAt`/`updatedAt`). */
+/** Convenção de auditoria do `timestamps()` do `@js_on_tracks/db` (colunas `createdAt`/`updatedAt`). */
 const CREATED_AT = "createdAt"
 const UPDATED_AT = "updatedAt"
 

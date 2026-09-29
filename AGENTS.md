@@ -7,7 +7,7 @@ formatos de arquivo e convenções estão definidos lá.
    configs da raiz ou `docs/`.
 2. **Stack**: Node >= 24, ESM (`"type": "module"`), TypeScript strict herdando `tsconfig.base.json`
    (`moduleResolution: bundler`, imports relativos **sem extensão**, `jsx: react-jsx` com
-   `jsxImportSource: @jot/views`).
+   `jsxImportSource: @js_on_tracks/views`).
 3. **Proibido**: decorators, `emitDecoratorMetadata`, `require`, `.js` em imports relativos, `any`
    gratuito em API pública, e **novas dependências** — tudo que você precisa já está instalado
    (não rode `npm install`; se faltar algo, reporte).

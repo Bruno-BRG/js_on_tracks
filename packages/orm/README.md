@@ -1,4 +1,4 @@
-# @jot/orm
+# @js_on_tracks/orm
 
 Active Record models and validations for JOT. A model is bound to a schema table and uses the default database created by the framework boot process.
 

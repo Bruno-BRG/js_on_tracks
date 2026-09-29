@@ -1,4 +1,4 @@
-# @jot/cli
+# @js_on_tracks/cli
 
 ## 1.0.0
 

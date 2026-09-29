@@ -72,7 +72,7 @@ export async function acquireGenerationLock(root: string): Promise<GenerationLoc
   )
 }
 
-/** Internal fault-injection seam; not re-exported by the @jot/cli package entry point. */
+/** Internal fault-injection seam; not re-exported by the @js_on_tracks/cli package entry point. */
 export async function acquireGenerationLockWithWriter(
   root: string,
   writeRecord: (handle: FileHandle, contents: string) => Promise<void>,

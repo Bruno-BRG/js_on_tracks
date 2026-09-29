@@ -1,9 +1,9 @@
-// Testes de runtime do `@jot/orm`: CRUD, consultas, timestamps e erros didáticos.
-// Banco SQLite `:memory:` do `@jot/db` (sem rede, sem arquivos temporários).
+// Testes de runtime do `@js_on_tracks/orm`: CRUD, consultas, timestamps e erros didáticos.
+// Banco SQLite `:memory:` do `@js_on_tracks/db` (sem rede, sem arquivos temporários).
 
 import assert from "node:assert/strict"
 import { after, test } from "node:test"
-import { id, string, table } from "@jot/db"
+import { id, string, table } from "@js_on_tracks/db"
 import { and, eq, gt, Model, minLength, OrmError, presence } from "./index"
 import { closeTestDatabase, posts, useTestDatabase, widgets } from "./test-fixtures"
 

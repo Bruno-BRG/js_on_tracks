@@ -9,4 +9,4 @@
 ### Patch Changes
 
 - Updated dependencies [765976e]
-  - @jot/cli@1.0.0
+  - @js_on_tracks/cli@1.0.0

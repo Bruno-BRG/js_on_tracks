@@ -1,5 +1,5 @@
 {
-  "name": "@jot/core",
+  "name": "@js_on_tracks/core",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -40,9 +40,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@jot/db": "^1.0.0",
-    "@jot/orm": "^1.0.0",
-    "@jot/views": "^1.0.0",
+    "@js_on_tracks/db": "^1.0.0",
+    "@js_on_tracks/orm": "^1.0.0",
+    "@js_on_tracks/views": "^1.0.0",
     "hono": "^4.13.9",
     "picocolors": "^1.1.1"
   }

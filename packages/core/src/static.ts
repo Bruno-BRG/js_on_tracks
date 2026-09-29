@@ -1,7 +1,7 @@
 import type { Stats } from "node:fs"
 import { readFile, stat } from "node:fs/promises"
 import path from "node:path"
-import { CLIENT_SCRIPT } from "@jot/views"
+import { CLIENT_SCRIPT } from "@js_on_tracks/views"
 import type { MiddlewareHandler } from "hono"
 import { bytesResponse, textResponse } from "./http"
 

@@ -1,7 +1,7 @@
 import type { Server } from "node:http"
 import path from "node:path"
 import { type ServerType, serve } from "@hono/node-server"
-import { createDatabase, setDefaultDatabase } from "@jot/db"
+import { createDatabase, setDefaultDatabase } from "@js_on_tracks/db"
 import { Hono } from "hono"
 import { type AppConfig, validateCsrfConfig } from "./app"
 import { csrfProtection } from "./csrf"
@@ -125,7 +125,7 @@ export async function start(options: StartOptions): Promise<ServerHandle> {
 
   if (options.database !== undefined) {
     // `schema` é opcional no `defineDatabase`; o M1 não usa o API relacional do
-    // Drizzle, então `{}` basta (o `@jot/orm` consulta com os próprios builders).
+    // Drizzle, então `{}` basta (o `@js_on_tracks/orm` consulta com os próprios builders).
     const database = createDatabase({
       url: options.database.url,
       schema: options.database.schema ?? {},

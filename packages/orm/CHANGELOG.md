@@ -1,4 +1,4 @@
-# @jot/orm
+# @js_on_tracks/orm
 
 ## 1.0.0
 
@@ -9,4 +9,4 @@
 ### Patch Changes
 
 - Updated dependencies [765976e]
-  - @jot/db@1.0.0
+  - @js_on_tracks/db@1.0.0

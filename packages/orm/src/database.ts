@@ -1,10 +1,10 @@
-// Acesso ao banco global setado pelo `@jot/core` (`setDefaultDatabase`) — contrato §4.2.
+// Acesso ao banco global setado pelo `@js_on_tracks/core` (`setDefaultDatabase`) — contrato §4.2.
 
-import { getDefaultDatabase } from "@jot/db"
+import { getDefaultDatabase } from "@js_on_tracks/db"
 import type { SqliteRemoteDatabase } from "drizzle-orm/sqlite-proxy"
 import { OrmError } from "./errors"
 
-/** Tipo do Drizzle usado pelo ORM (mesma instância que `Database.drizzle` do `@jot/db`). */
+/** Tipo do Drizzle usado pelo ORM (mesma instância que `Database.drizzle` do `@js_on_tracks/db`). */
 export type Drizzle = SqliteRemoteDatabase<Record<string, unknown>>
 
 /**
@@ -13,7 +13,7 @@ export type Drizzle = SqliteRemoteDatabase<Record<string, unknown>>
  */
 export function drizzle(): Drizzle {
   try {
-    // O `@jot/db` lança o próprio erro quando não há banco; traduzimos para o erro do ORM
+    // O `@js_on_tracks/db` lança o próprio erro quando não há banco; traduzimos para o erro do ORM
     // (mensagem em inglês, conforme o contrato).
     return getDefaultDatabase().drizzle as unknown as Drizzle
   } catch {

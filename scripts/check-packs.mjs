@@ -10,7 +10,7 @@ assert.ok(npmCli, "Run this check with `npm run check:packs` so npm can provide 
 
 const packages = [
   {
-    name: "@jot/cli",
+    name: "@js_on_tracks/cli",
     dir: "packages/cli",
     runtime: [
       "package/bin/jot.js",
@@ -18,13 +18,13 @@ const packages = [
       "package/templates/app/_gitignore",
     ],
   },
-  { name: "@jot/core", dir: "packages/core", runtime: [] },
+  { name: "@js_on_tracks/core", dir: "packages/core", runtime: [] },
   { name: "create-jot", dir: "packages/create-jot", runtime: ["package/bin/create-jot.js"] },
-  { name: "@jot/db", dir: "packages/db", runtime: [] },
+  { name: "@js_on_tracks/db", dir: "packages/db", runtime: [] },
   { name: "jot-framework", dir: "packages/jot-framework", runtime: [] },
-  { name: "@jot/orm", dir: "packages/orm", runtime: [] },
+  { name: "@js_on_tracks/orm", dir: "packages/orm", runtime: [] },
   {
-    name: "@jot/views",
+    name: "@js_on_tracks/views",
     dir: "packages/views",
     runtime: ["package/src/jsx-runtime.ts", "package/src/jsx-dev-runtime.ts"],
   },

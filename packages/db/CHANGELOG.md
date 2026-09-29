@@ -1,4 +1,4 @@
-# @jot/db
+# @js_on_tracks/db
 
 ## 1.0.0
 

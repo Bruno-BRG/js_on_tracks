@@ -9,7 +9,7 @@
 ### Patch Changes
 
 - Updated dependencies [765976e]
-  - @jot/core@1.0.0
-  - @jot/db@1.0.0
-  - @jot/orm@1.0.0
-  - @jot/views@1.0.0
+  - @js_on_tracks/core@1.0.0
+  - @js_on_tracks/db@1.0.0
+  - @js_on_tracks/orm@1.0.0
+  - @js_on_tracks/views@1.0.0

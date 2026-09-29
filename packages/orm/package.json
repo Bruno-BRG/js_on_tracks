@@ -1,5 +1,5 @@
 {
-  "name": "@jot/orm",
+  "name": "@js_on_tracks/orm",
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/db": "^1.0.0",
+    "@js_on_tracks/db": "^1.0.0",
     "drizzle-orm": "^0.45.3"
   }
 }

@@ -1,4 +1,4 @@
-# @jot/cli
+# @js_on_tracks/cli
 
 Interface de linha de comando da JOT. O executável `jot` cria apps, inicia o servidor de desenvolvimento, gera models e scaffolds CRUD, executa migrations SQL, lista rotas e abre o console do app.
 

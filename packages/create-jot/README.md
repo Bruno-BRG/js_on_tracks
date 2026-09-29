@@ -1,6 +1,6 @@
 # create-jot
 
-Create a new JOT TypeScript web application. The command delegates to the same project generator as `@jot/cli`.
+Create a new JOT TypeScript web application. The command delegates to the same project generator as `@js_on_tracks/cli`.
 
 ```sh
 npm create jot@latest blog

@@ -19,11 +19,11 @@ A JOT 1.0 inclui o generator de apps, generators de model e scaffold, rotas REST
 |---|---|
 | `jot-framework` | Entry point do framework para apps |
 | `create-jot` | Generator de projetos `npm create jot@latest` |
-| `@jot/cli` | Comandos `jot` para servidor, generators, banco, rotas e console |
-| `@jot/core` | Boot, rotas, controllers, sessões e runtime HTTP |
-| `@jot/db` | Schema SQLite, driver e runner de migrations |
-| `@jot/orm` | Models Active Record e validações |
-| `@jot/views` | Renderização JSX no servidor e interações progressivas |
+| `@js_on_tracks/cli` | Comandos `jot` para servidor, generators, banco, rotas e console |
+| `@js_on_tracks/core` | Boot, rotas, controllers, sessões e runtime HTTP |
+| `@js_on_tracks/db` | Schema SQLite, driver e runner de migrations |
+| `@js_on_tracks/orm` | Models Active Record e validações |
+| `@js_on_tracks/views` | Renderização JSX no servidor e interações progressivas |
 
 `@jot/testing` é um pacote privado de desenvolvimento e não faz parte do release 1.0.
 

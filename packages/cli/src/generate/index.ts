@@ -99,7 +99,7 @@ export async function generateResource(
   return generateResourceWithDependencies(rawName, rawFields, options, {})
 }
 
-/** Internal test seam; not re-exported from the @jot/cli package entry point. */
+/** Internal test seam; not re-exported from the @js_on_tracks/cli package entry point. */
 export async function generateResourceWithDependencies(
   rawName: string,
   rawFields: readonly string[],

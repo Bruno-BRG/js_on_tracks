@@ -154,7 +154,7 @@ test("fields cannot shadow Model/Object members or reserved bindings", () => {
       () => buildResource("post", [`${name}:string!`]),
       (error: unknown) =>
         error instanceof CliError &&
-        (error.message.includes("@jot/orm Model API") ||
+        (error.message.includes("@js_on_tracks/orm Model API") ||
           error.message.includes("reserved by JavaScript/TypeScript")),
       name,
     )

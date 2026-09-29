@@ -1,7 +1,7 @@
 /**
- * Runtime JSX automático de produção do `@jot/views`.
+ * Runtime JSX automático de produção do `@js_on_tracks/views`.
  *
- * Com `"jsx": "react-jsx"` + `"jsxImportSource": "@jot/views"` no tsconfig, o
+ * Com `"jsx": "react-jsx"` + `"jsxImportSource": "@js_on_tracks/views"` no tsconfig, o
  * TypeScript/esbuild chamam `jsx`/`jsxs` e resolvem `<></>` para `Fragment`.
  */
 

@@ -1,4 +1,4 @@
-# @jot/orm
+# @js_on_tracks/orm
 
 Models Active Record e validações para JOT. Cada model usa uma tabela do schema e o banco padrão configurado durante o boot do framework.
 

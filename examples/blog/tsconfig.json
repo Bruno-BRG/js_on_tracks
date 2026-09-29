@@ -12,7 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@jot/views"
+    "jsxImportSource": "@js_on_tracks/views"
   },
   "include": ["config", "app", "db", "test", ".jot", "drizzle.config.ts"]
 }

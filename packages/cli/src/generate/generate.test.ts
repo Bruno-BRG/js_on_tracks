@@ -155,7 +155,7 @@ test("CLI validation failures preserve every app file byte-for-byte", {
     assert.equal(result.code, 1)
     assert.match(
       result.stderr,
-      /Field "save" is reserved because it conflicts with the @jot\/orm Model API/,
+      /Field "save" is reserved because it conflicts with the @js_on_tracks\/orm Model API/,
     )
     assert.deepEqual(await snapshotFiles(appDir), before)
     assert.ok(!existsSync(join(appDir, "app", "models", "post.ts")))

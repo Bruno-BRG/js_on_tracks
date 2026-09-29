@@ -17,7 +17,7 @@ Após o bootstrap, o job de publicação usa OIDC do GitHub Actions com npm Trus
 
 Antes de habilitar releases automatizados por OIDC:
 
-1. Confirme que a conta npm pode publicar `jot-framework`, `create-jot` e os pacotes do escopo `@jot`. Se algum nome já estiver ocupado, resolva a titularidade antes do release.
+1. Confirme que a conta npm pode publicar `jot-framework`, `create-jot` e os pacotes do escopo `@js_on_tracks`. Se algum nome já estiver ocupado, resolva a titularidade antes do release.
 2. Em **Settings → Actions → General → Workflow permissions**, habilite **Allow GitHub Actions to create and approve pull requests** para que o Changesets Action crie ou atualize seu pull request de versões ([requisitos do Changesets Action](https://github.com/changesets/action#requirements), [configuração do GitHub](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#allowing-github-actions-to-create-and-approve-pull-requests)).
 3. Nas configurações do repositório GitHub, crie o ambiente `npm-publish` e adicione mantenedores como revisores obrigatórios.
 4. Depois que o primeiro publish interativo criar os pacotes, adicione em cada um um trusted publisher GitHub Actions com owner `Bruno-BRG`, repositório `js_on_tracks`, arquivo de workflow `publish.yml` e ambiente `npm-publish`.
@@ -41,11 +41,11 @@ A saída de `git rev-parse HEAD` deve ser igual ao SHA registrado pelo workflow 
 npm login
 npm whoami
 npm run check:packs
-npm publish --workspace=@jot/db --access=public
-npm publish --workspace=@jot/views --access=public
-npm publish --workspace=@jot/orm --access=public
-npm publish --workspace=@jot/core --access=public
-npm publish --workspace=@jot/cli --access=public
+npm publish --workspace=@js_on_tracks/db --access=public
+npm publish --workspace=@js_on_tracks/views --access=public
+npm publish --workspace=@js_on_tracks/orm --access=public
+npm publish --workspace=@js_on_tracks/core --access=public
+npm publish --workspace=@js_on_tracks/cli --access=public
 npm publish --workspace=jot-framework --access=public
 npm publish --workspace=create-jot --access=public
 ```
@@ -56,8 +56,8 @@ Pare se algum comando falhar; resolva o problema antes de publicar os pacotes de
 
 - `jot-framework`
 - `create-jot`
-- `@jot/cli`
-- `@jot/core`
-- `@jot/db`
-- `@jot/orm`
-- `@jot/views`
+- `@js_on_tracks/cli`
+- `@js_on_tracks/core`
+- `@js_on_tracks/db`
+- `@js_on_tracks/orm`
+- `@js_on_tracks/views`

@@ -1,4 +1,4 @@
-// Fixtures dos testes do ORM: tabela `posts` + banco SQLite `:memory:` do `@jot/db`.
+// Fixtures dos testes do ORM: tabela `posts` + banco SQLite `:memory:` do `@js_on_tracks/db`.
 //
 // O banco só é criado quando `useTestDatabase()` é chamado — assim o primeiro teste de
 // `orm.test.ts` consegue verificar o erro didático de "nenhum banco configurado" antes de
@@ -14,7 +14,7 @@ import {
   table,
   text,
   timestamps,
-} from "@jot/db"
+} from "@js_on_tracks/db"
 
 export const posts = table("posts", {
   id: id(),

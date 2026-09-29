@@ -17,7 +17,7 @@ After bootstrap, the publish job uses GitHub Actions OIDC with npm Trusted Publi
 
 Before enabling automated OIDC releases:
 
-1. Confirm the npm account can publish `jot-framework`, `create-jot`, and the `@jot` scope packages. If any name is already claimed, resolve ownership before release.
+1. Confirm the npm account can publish `jot-framework`, `create-jot`, and the `@js_on_tracks` scope packages. If any name is already claimed, resolve ownership before release.
 2. In **Settings → Actions → General → Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests** so the Changesets Action can create or update its version pull request ([Changesets Action requirements](https://github.com/changesets/action#requirements), [GitHub setting](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#allowing-github-actions-to-create-and-approve-pull-requests)).
 3. In GitHub repository settings, create the `npm-publish` environment and add the required maintainers as required reviewers.
 4. After the initial interactive publish creates the package entries, add a GitHub Actions trusted publisher for owner `Bruno-BRG`, repository `js_on_tracks`, workflow filename `publish.yml`, and environment `npm-publish` on each package.
@@ -41,11 +41,11 @@ The `git rev-parse HEAD` output must match the SHA recorded by the protected wor
 npm login
 npm whoami
 npm run check:packs
-npm publish --workspace=@jot/db --access=public
-npm publish --workspace=@jot/views --access=public
-npm publish --workspace=@jot/orm --access=public
-npm publish --workspace=@jot/core --access=public
-npm publish --workspace=@jot/cli --access=public
+npm publish --workspace=@js_on_tracks/db --access=public
+npm publish --workspace=@js_on_tracks/views --access=public
+npm publish --workspace=@js_on_tracks/orm --access=public
+npm publish --workspace=@js_on_tracks/core --access=public
+npm publish --workspace=@js_on_tracks/cli --access=public
 npm publish --workspace=jot-framework --access=public
 npm publish --workspace=create-jot --access=public
 ```
@@ -56,8 +56,8 @@ Stop if any command fails; do not continue to dependent packages until the failu
 
 - `jot-framework`
 - `create-jot`
-- `@jot/cli`
-- `@jot/core`
-- `@jot/db`
-- `@jot/orm`
-- `@jot/views`
+- `@js_on_tracks/cli`
+- `@js_on_tracks/core`
+- `@js_on_tracks/db`
+- `@js_on_tracks/orm`
+- `@js_on_tracks/views`

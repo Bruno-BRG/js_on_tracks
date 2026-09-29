@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
-import { CLIENT_SCRIPT } from "@jot/views"
+import { CLIENT_SCRIPT } from "@js_on_tracks/views"
 import { routes } from "./routes"
 import { createApp } from "./server"
 

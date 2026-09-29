@@ -217,7 +217,7 @@ function renderAttributes(props: Props): string {
     }
     if (name === "dangerouslySetInnerHTML") {
       throw new TypeError(
-        `"dangerouslySetInnerHTML" is not part of @jot/views. ` +
+        `"dangerouslySetInnerHTML" is not part of @js_on_tracks/views. ` +
           `For raw HTML, use raw() inside children: <div>{raw("<b>ok</b>")}</div>.`,
       )
     }

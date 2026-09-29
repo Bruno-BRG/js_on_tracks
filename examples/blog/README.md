@@ -1,6 +1,6 @@
 # JOT Blog example
 
-A small JOT 1.0 app that demonstrates a generated Post model and full CRUD scaffold using the public `jot-framework` and `@jot/cli` packages.
+A small JOT 1.0 app that demonstrates a generated Post model and full CRUD scaffold using the public `jot-framework` and `@js_on_tracks/cli` packages.
 
 ## Run the app
 

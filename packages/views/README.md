@@ -1,4 +1,4 @@
-# @jot/views
+# @js_on_tracks/views
 
 The JSX server-rendering runtime used by JOT apps. It exports the automatic JSX runtime, `renderToString`, HTML escaping, fragments, raw HTML, and the small browser-side script for `jot-*` form interactions.
 
@@ -6,13 +6,13 @@ The JSX server-rendering runtime used by JOT apps. It exports the automatic JSX 
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@jot/views"
+    "jsxImportSource": "@js_on_tracks/views"
   }
 }
 ```
 
 ```tsx
-import { renderToString } from "@jot/views"
+import { renderToString } from "@js_on_tracks/views"
 
 const html = await renderToString(<main><h1>Hello</h1></main>)
 ```

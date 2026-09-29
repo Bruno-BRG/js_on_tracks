@@ -1,4 +1,4 @@
-# @jot/views
+# @js_on_tracks/views
 
 ## 1.0.0
 
