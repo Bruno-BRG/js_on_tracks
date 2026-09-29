@@ -1,4 +1,5 @@
 import type { Context, Handler } from "hono"
+import { isFormContentType, isJsonContentType } from "./content_type"
 import type { Controller, ControllerContext } from "./controller"
 import { snake } from "./naming"
 import { getControllerClass, getViewComponent } from "./registry"
@@ -75,6 +76,7 @@ export function createHandler(definition: RouteDefinition): Handler {
     const query = c.req.query()
     const body = await parseRequestBody(c)
     const params: Record<string, string> = { ...query, ...stringValues(body), ...c.req.param() }
+    delete params._csrf
 
     const state = getRequestState(c)
     const session = state?.session ?? new Session()
@@ -111,27 +113,34 @@ export async function parseRequestBody(c: Context): Promise<Record<string, unkno
   const method = c.req.method.toUpperCase()
   if (method === "GET" || method === "HEAD") return {}
 
-  const contentType = (c.req.header("content-type") ?? "").toLowerCase()
-  if (contentType.includes("application/json")) {
+  const contentType = c.req.header("content-type")
+  if (isJsonContentType(contentType)) {
     try {
       const data: unknown = await c.req.json()
-      return isRecord(data) ? { ...data } : {}
+      if (!isRecord(data)) return {}
+      const body = { ...data }
+      delete body._csrf
+      return body
     } catch {
       return {}
     }
   }
-  if (
-    contentType.startsWith("application/x-www-form-urlencoded") ||
-    contentType.startsWith("multipart/form-data")
-  ) {
+  if (isFormContentType(contentType)) {
     try {
-      const data = await c.req.parseBody()
-      return { ...data }
+      const data = await parseFormBody(c)
+      delete data._csrf
+      return data
     } catch {
       return {}
     }
   }
   return {}
+}
+
+/** Parse compartilhado de urlencoded/multipart; Hono cacheia o FormData no Context. */
+export async function parseFormBody(c: Context): Promise<Record<string, unknown>> {
+  const data = await c.req.parseBody({ all: true })
+  return { ...data }
 }
 
 /** Apenas campos string entram em `params` (Files e valores de JSON ficam no `body`). */

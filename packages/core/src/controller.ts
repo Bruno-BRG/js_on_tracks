@@ -34,7 +34,7 @@ export interface ControllerContext {
   params: Record<string, string>
   /** Somente a query string. */
   query: Record<string, string>
-  /** Body parseado: urlencoded/multipart → `string | File`; json → valores. */
+  /** Body parseado: urlencoded/multipart → strings/Files (arrays para campos repetidos); JSON → valores. */
   body: Record<string, unknown>
   /** Sessão por cookie assinado. */
   session: Session
@@ -85,9 +85,18 @@ export abstract class Controller {
     options: RenderOptions = {},
   ): Promise<Response> {
     const status = options.status ?? this.status ?? 200
-    const html = await renderView(view, props, options.layout, this.flash)
+    const csrfToken = this.csrfToken()
+    const html = await renderView(view, props, options.layout, this.flash, csrfToken)
     this.session.delete("flash")
-    return textResponse(this.request, html, toStatusCode(status), HTML_CONTENT_TYPE)
+    const response = textResponse(this.request, html, toStatusCode(status), HTML_CONTENT_TYPE)
+    response.headers.set("Cache-Control", "private, no-store")
+    return response
+  }
+
+  /** Token para formulários/API; qualquer resposta que o use não pode ser cacheada. */
+  csrfToken(): string {
+    this.request.header("Cache-Control", "private, no-store")
+    return this.session.csrfToken()
   }
 
   /** Redirect (default 303), opcionalmente gravando flash para o próximo render. */

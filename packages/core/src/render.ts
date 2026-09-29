@@ -9,17 +9,18 @@ export const DEFAULT_LAYOUT = "layouts/application"
  * Renderiza uma view (e o layout, quando não desligado) para HTML.
  *
  * `flash` entra nas mesmas props da view e do layout; o layout recebe também
- * `children` com a view já renderizada.
+ * `children` com a view já renderizada. `csrfToken` é reservado pelo framework.
  */
 export async function renderView(
   name: string,
   props: Record<string, unknown>,
   layout: string | false | undefined,
   flash: Record<string, unknown>,
+  csrfToken: string,
 ): Promise<string> {
   const view = getViewComponent(name)
   if (view === undefined) throw viewNotFoundError(name, "View")
-  const viewProps = { ...props, flash }
+  const viewProps = { ...props, flash, csrfToken }
   const inner = jsx(view, viewProps)
   if (layout === false) return renderToString(inner)
   const layoutName = typeof layout === "string" ? layout : DEFAULT_LAYOUT

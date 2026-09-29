@@ -1,7 +1,16 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
@@ -447,7 +456,7 @@ test("a failed lock-record write keeps the uncertain partial lock for manual rec
   timeout: 60_000,
 }, async () => {
   const { base, appDir } = await makeApp()
-  const lockPath = join(appDir, ...GENERATION_LOCK_RELATIVE_PATH.split("/"))
+  const lockPath = join(await realpath(appDir), ...GENERATION_LOCK_RELATIVE_PATH.split("/"))
   try {
     await assert.rejects(
       acquireGenerationLockWithWriter(appDir, async (handle, contents) => {

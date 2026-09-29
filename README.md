@@ -1,42 +1,57 @@
 # JOT — JS on Tracks
 
-Um framework web para TypeScript no espírito do Ruby on Rails: **muito opinativo, rápida de aprender e ainda mais rápida de desenvolver**.
+JOT is an opinionated TypeScript web framework in the spirit of Ruby on Rails: conventions, generators, server-rendered JSX, SQLite, and SQL migrations in one toolkit.
 
 ```bash
 npm create jot@latest blog
 cd blog
-jot db:migrate
-jot server        # http://localhost:3000
+npm run migrate
+npm run dev        # http://localhost:3000
 ```
 
-## Princípios
+## Principles
 
-1. Zero config para começar; config só quando você precisar mudar o padrão.
-2. Convenção > configuração.
-3. Batteries included — cada peça tem escape hatch.
-4. SSR-first: JavaScript no cliente é exceção.
-5. Type-safety ponta a ponta, sem decorators e sem reflexão mágica.
-6. Migrations em SQL puro.
-7. Um comando para cada tarefa.
-8. Erros didáticos.
-9. Windows é plataforma de primeira classe.
+1. Start with sensible defaults and add configuration when needed.
+2. Convention over configuration.
+3. Batteries included, with escape hatches.
+4. Server rendering first; client-side JavaScript is optional.
+5. End-to-end type safety without decorators or runtime reflection.
+6. Plain SQL migrations.
+7. A command for each task.
+8. Errors explain how to fix the problem.
+9. Windows is a first-class platform.
 
-## Status
+## Version 1.0 scope
 
-M0/M1 em construção — walking skeleton (`jot new` → `jot server` com banco, rotas, controllers e views). Veja `docs/architecture.md` para o contrato técnico.
+JOT 1.0 includes the app generator, model and scaffold generators, REST routes, server-rendered JSX, SQLite, SQL migrations, validations, flash messages, and default-on CSRF protection. Active Record associations are planned for a later release. See [the architecture contract](docs/architecture.md) and the runnable [blog example](examples/blog/README.md).
 
-## Estrutura
+## Packages
 
-| Pacote | Papel |
+| Package | Purpose |
 |---|---|
-| `@jot/core` | Boot, rotas, controllers, Hono, sessão, static |
-| `@jot/db` | Schema DSL (Drizzle) + driver SQLite + runner de migrations |
-| `@jot/orm` | Camada ActiveRecord (`Model`, validações) |
-| `@jot/views` | Runtime JSX SSR + cliente mínimo (`jot-*`) |
-| `@jot/cli` | Binário `jot` (server, new, db:*, routes, console) |
-| `jot-framework` | Meta-pacote que os apps importam |
-| `create-jot` | `npm create jot@latest` |
+| `jot-framework` | App-facing framework entrypoint |
+| `create-jot` | `npm create jot@latest` project generator |
+| `@jot/cli` | `jot` server, generator, database, route, and console commands |
+| `@jot/core` | App boot, routes, controllers, sessions, and HTTP runtime |
+| `@jot/db` | SQLite schema, driver, and migration runner |
+| `@jot/orm` | Active Record models and validations |
+| `@jot/views` | JSX server rendering and progressive interactions |
 
-## Licença
+`@jot/testing` is a private development package and is not part of the 1.0 release.
 
-MIT
+## Requirements
+
+- Node.js 24 or newer.
+- TypeScript with ESM and bundler module resolution.
+- Generated apps use `tsx` for development and do not bundle the framework.
+
+## Documentation
+
+- Português brasileiro: [README.pt-BR.md](README.pt-BR.md)
+- Technical contract: [docs/architecture.md](docs/architecture.md)
+- Release process: [docs/releasing.md](docs/releasing.md)
+- Example app: [examples/blog](examples/blog/README.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).

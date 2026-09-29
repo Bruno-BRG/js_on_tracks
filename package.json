@@ -12,6 +12,10 @@
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "check:packs": "node scripts/check-packs.mjs",
+    "check:npm-version": "node scripts/check-npm-version.mjs",
+    "release:version": "node scripts/version-packages.mjs",
+    "release:publish": "node scripts/publish-changed-packages.mjs",
     "lint": "biome check .",
     "format": "biome check --write ."
   },

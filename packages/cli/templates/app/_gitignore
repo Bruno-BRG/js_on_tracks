@@ -1,0 +1,6 @@
+node_modules/
+.jot/
+*.sqlite
+*.sqlite-journal
+.env
+.env.local

@@ -19,6 +19,21 @@ interface BinResult {
   readonly stderr: string
 }
 
+class CookieJar {
+  cookie: string | undefined
+  csrfToken: string | undefined
+
+  async request(url: string, init: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(init.headers)
+    if (this.cookie !== undefined) headers.set("cookie", this.cookie)
+    const response = await fetch(url, { ...init, headers })
+    for (const setCookie of response.headers.getSetCookie()) {
+      this.cookie = setCookie.split(";")[0]
+    }
+    return response
+  }
+}
+
 test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout: 120_000 }, async () => {
   await mkdir(join(repoRoot, ".tmp-e2e"), { recursive: true })
   const base = await mkdtemp(join(repoRoot, ".tmp-e2e", "run-"))
@@ -99,16 +114,42 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     )
     assert.equal(Number(listening[1]), port)
 
+    const jar = new CookieJar()
+
     // Lista vazia (nenhum seed: o scaffold nasceu do zero).
-    const emptyList = await fetch(`http://localhost:${port}/posts`)
+    const emptyList = await jar.request(`http://localhost:${port}/posts`)
     assert.equal(emptyList.status, 200)
     assert.match(await emptyList.text(), /No posts yet\./)
 
-    const newPage = await fetch(`http://localhost:${port}/posts/new`)
+    const newPage = await jar.request(`http://localhost:${port}/posts/new`)
     assert.equal(newPage.status, 200)
-    assert.match(await newPage.text(), /<form/)
+    const newHtml = await newPage.text()
+    assert.match(newHtml, /<form/)
+    const tokenMatch = /name="_csrf" value="([A-Za-z0-9_-]{43})"/.exec(newHtml)
+    assert.ok(tokenMatch, "generated new form should contain a synchronizer token")
+    jar.csrfToken = tokenMatch[1]
+    assert.ok(jar.cookie?.startsWith("jot_session="), "GET form should create a session cookie")
+    assert.equal(newPage.headers.get("cache-control"), "private, no-store")
 
-    const created = await postForm(`http://localhost:${port}/posts`, {
+    const rejected = await jar.request(`http://localhost:${port}/posts`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: "title=Rejected+post&body=missing+token",
+    })
+    assert.equal(rejected.status, 403)
+    assert.equal(rejected.headers.getSetCookie().length, 0)
+    const rejectedDatabase = new DatabaseSync(join(appDir, "db", "dev.sqlite"))
+    try {
+      const row = rejectedDatabase.prepare("SELECT count(*) AS count FROM posts").get() as
+        | { count: number }
+        | undefined
+      assert.equal(row?.count, 0, "POST without a token must not insert a row")
+    } finally {
+      rejectedDatabase.close()
+    }
+
+    const created = await postForm(jar, `http://localhost:${port}/posts`, {
       title: "E2E post",
       body: "created in the golden test",
       published: "1",
@@ -120,18 +161,18 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     assert.ok(location !== null, "POST /posts did not redirect")
     assert.match(location, /^\/posts\/1$/)
 
-    const show = await fetch(`http://localhost:${port}${location}`)
+    const show = await jar.request(`http://localhost:${port}${location}`)
     assert.equal(show.status, 200)
     const showHtml = await show.text()
     assert.match(showHtml, /E2E post/)
     assert.match(showHtml, /Yes/)
     assert.match(showHtml, /2\.5/)
 
-    const editPage = await fetch(`http://localhost:${port}${location}/edit`)
+    const editPage = await jar.request(`http://localhost:${port}${location}/edit`)
     assert.equal(editPage.status, 200)
     assert.match(await editPage.text(), /E2E post/)
 
-    const emptyIntegerUpdate = await postForm(`http://localhost:${port}${location}`, {
+    const emptyIntegerUpdate = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "E2E post",
       body: "created in the golden test",
@@ -139,7 +180,7 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     })
     assert.equal(emptyIntegerUpdate.status, 422, "empty required integer update must be rejected")
 
-    const fractionalIntegerUpdate = await postForm(`http://localhost:${port}${location}`, {
+    const fractionalIntegerUpdate = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "E2E post",
       body: "created in the golden test",
@@ -150,7 +191,7 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     assert.match(fractionalIntegerHtml, /Amount must be a whole number/)
     assert.match(fractionalIntegerHtml, /name="amount" value="1\.5"/)
 
-    const invalidRealUpdate = await postForm(`http://localhost:${port}${location}`, {
+    const invalidRealUpdate = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "E2E post",
       body: "created in the golden test",
@@ -162,7 +203,7 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     assert.match(invalidRealHtml, /Score must be a number/)
     assert.match(invalidRealHtml, /name="score" value="not-a-number"/)
 
-    const stillUnchanged = await fetch(`http://localhost:${port}${location}`)
+    const stillUnchanged = await jar.request(`http://localhost:${port}${location}`)
     assert.equal(stillUnchanged.status, 200)
     const unchangedHtml = await stillUnchanged.text()
     assert.match(unchangedHtml, /E2E post/)
@@ -178,7 +219,7 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
       unchangedDatabase.close()
     }
 
-    const updated = await postForm(`http://localhost:${port}${location}`, {
+    const updated = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "Edited post",
       body: "edited in the golden test",
@@ -187,13 +228,13 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     })
     assert.equal(updated.status, 303)
 
-    const afterUpdate = await fetch(`http://localhost:${port}${location}`)
+    const afterUpdate = await jar.request(`http://localhost:${port}${location}`)
     assert.equal(afterUpdate.status, 200)
     const afterUpdateHtml = await afterUpdate.text()
     assert.match(afterUpdateHtml, /Edited post/)
     assert.match(afterUpdateHtml, /edited in the golden test/)
 
-    const omittedNumericUpdate = await postForm(`http://localhost:${port}${location}`, {
+    const omittedNumericUpdate = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "Updated without numbers",
       body: "numeric values should remain unchanged",
@@ -210,7 +251,7 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
       omittedNumericDatabase.close()
     }
 
-    const clearNullableReal = await postForm(`http://localhost:${port}${location}`, {
+    const clearNullableReal = await postForm(jar, `http://localhost:${port}${location}`, {
       _method: "put",
       title: "Edited post",
       body: "edited in the golden test",
@@ -227,34 +268,36 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
     } finally {
       database.close()
     }
-    const clearedEdit = await fetch(`http://localhost:${port}${location}/edit`)
+    const clearedEdit = await jar.request(`http://localhost:${port}${location}/edit`)
     assert.equal(clearedEdit.status, 200)
     assert.match(await clearedEdit.text(), /name="score" value=""/)
 
-    const deleted = await postForm(`http://localhost:${port}${location}`, { _method: "delete" })
+    const deleted = await postForm(jar, `http://localhost:${port}${location}`, {
+      _method: "delete",
+    })
     assert.equal(deleted.status, 303)
     assert.equal(deleted.headers.get("location"), "/posts")
 
-    const missing = await fetch(`http://localhost:${port}${location}`)
+    const missing = await jar.request(`http://localhost:${port}${location}`)
     assert.equal(missing.status, 404)
     assert.match(await missing.text(), /404/)
 
     // Validação do presence(): 422 com a mensagem no form.
-    const invalid = await postForm(`http://localhost:${port}/posts`, {
+    const invalid = await postForm(jar, `http://localhost:${port}/posts`, {
       title: "",
       body: "no title",
     })
     assert.equal(invalid.status, 422)
     assert.match(await invalid.text(), /can&#39;t be blank/)
 
-    const missingRequiredInteger = await postForm(`http://localhost:${port}/posts`, {
+    const missingRequiredInteger = await postForm(jar, `http://localhost:${port}/posts`, {
       title: "Missing amount",
       amount: "",
     })
     assert.equal(missingRequiredInteger.status, 422)
     assert.match(await missingRequiredInteger.text(), /amount.*can&#39;t be blank/)
 
-    const fractionalIntegerPost = await postForm(`http://localhost:${port}/posts`, {
+    const fractionalIntegerPost = await postForm(jar, `http://localhost:${port}/posts`, {
       title: "Fractional amount",
       amount: "1.5",
     })
@@ -268,12 +311,13 @@ test("golden e2e: generate scaffold → migrate → server → CRUD", { timeout:
   }
 })
 
-function postForm(url: string, fields: Record<string, string>): Promise<Response> {
-  return fetch(url, {
+function postForm(jar: CookieJar, url: string, fields: Record<string, string>): Promise<Response> {
+  assert.ok(jar.csrfToken, "GET a generated form before posting")
+  return jar.request(url, {
     method: "POST",
     redirect: "manual",
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(fields),
+    body: new URLSearchParams({ ...fields, _csrf: jar.csrfToken }),
   })
 }
 

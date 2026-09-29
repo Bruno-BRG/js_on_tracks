@@ -3,7 +3,8 @@ import path from "node:path"
 import { type ServerType, serve } from "@hono/node-server"
 import { createDatabase, setDefaultDatabase } from "@jot/db"
 import { Hono } from "hono"
-import type { AppConfig } from "./app"
+import { type AppConfig, validateCsrfConfig } from "./app"
+import { csrfProtection } from "./csrf"
 import type { DatabaseConfig } from "./database"
 import { createHandler, validateRoutes } from "./dispatch"
 import { env, isProduction, loadDotEnv } from "./env"
@@ -33,9 +34,34 @@ export interface CreateAppOptions {
 export function createApp(options: CreateAppOptions): Hono {
   const root = options.root ?? process.cwd()
   const production = isProduction()
+  validateCsrfConfig(options.app?.csrf)
   const { secret } = resolveSecret(options.secret)
 
   validateRoutes(options.routes.definitions)
+  const csrfConfig = options.app?.csrf
+  const csrfEnabled = csrfConfig?.enabled !== false
+  if (!csrfEnabled) {
+    const reason = csrfConfig.reason.trim()
+    console.warn(
+      `CSRF protection is disabled for this app (reason: ${JSON.stringify(reason)}). ` +
+        "Use this only when every unsafe route has independent authentication.",
+    )
+  }
+  for (const definition of options.routes.definitions) {
+    if (definition.csrf === undefined) continue
+    if (definition.csrf.exempt !== true) {
+      throw new Error(
+        `Invalid CSRF exemption for ${definition.method} ${definition.path}. Use { csrf: { exempt: true, reason: "..." } } only for independently authenticated routes.`,
+      )
+    }
+    assertCsrfReason(definition.csrf.reason)
+    if (!isUnsafeMethod(definition.method)) continue
+    const reason = definition.csrf.reason.trim()
+    console.warn(
+      `CSRF protection is exempt for ${definition.method} ${definition.path} (reason: ${JSON.stringify(reason)}). ` +
+        "Verify independent authentication before processing this route.",
+    )
+  }
   setPathHelpers(options.routes.definitions)
 
   const app = new Hono()
@@ -44,11 +70,28 @@ export function createApp(options: CreateAppOptions): Hono {
   app.use("*", staticMiddleware({ root }))
   app.use("*", sessionMiddleware({ secret, production }))
   for (const definition of options.routes.definitions) {
-    app.on(definition.method, definition.path, createHandler(definition))
+    const handler = createHandler(definition)
+    if (csrfEnabled && isUnsafeMethod(definition.method) && definition.csrf?.exempt !== true) {
+      app.on(definition.method, definition.path, csrfProtection(), handler)
+    } else {
+      app.on(definition.method, definition.path, handler)
+    }
   }
   app.notFound(notFoundHandler(!production))
   app.onError(errorHandler(!production))
   return app
+}
+
+function isUnsafeMethod(method: string): boolean {
+  return method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE"
+}
+
+function assertCsrfReason(reason: unknown): asserts reason is string {
+  if (typeof reason !== "string" || reason.trim().length === 0) {
+    throw new Error(
+      'A CSRF route exemption requires a non-empty reason. Use { csrf: { exempt: true, reason: "..." } } only for independently authenticated routes.',
+    )
+  }
 }
 
 export interface StartOptions {

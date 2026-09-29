@@ -7,15 +7,31 @@ import { Controller } from "./controller"
 import { __clearRegistries, registerControllers, registerViews } from "./registry"
 import { routes } from "./routes"
 import { createApp } from "./server"
-import { SESSION_COOKIE, Session } from "./session"
+import { resolveSecret, SESSION_COOKIE, Session } from "./session"
 
 const root = mkdtempSync(join(tmpdir(), "jot-session-"))
-const SECRET = "test-secret"
+const SECRET = "test-secret-for-jot-session-tests-with-32-bytes"
+
+function createSessionTestApp(options: Parameters<typeof createApp>[0]) {
+  return createApp({
+    ...options,
+    app: {
+      name: "session-tests",
+      csrf: {
+        enabled: false,
+        reason:
+          "This suite tests session and flash behavior; default-on CSRF is tested separately.",
+      },
+    },
+  })
+}
 
 function sessionCookie(response: Response): string {
-  const setCookie = response.headers.getSetCookie()
-  assert.ok(setCookie.length > 0, "expected a Set-Cookie header")
-  return setCookie[0]!.split(";")[0]!
+  const setCookie = response.headers.getSetCookie().at(0)
+  assert.ok(setCookie, "expected a Set-Cookie header")
+  const cookie = setCookie.split(";").at(0)
+  assert.ok(cookie)
+  return cookie
 }
 
 test("Session: get/set/has/delete/dirty e cópia em all()", () => {
@@ -42,6 +58,67 @@ test("Session: get/set/has/delete/dirty e cópia em all()", () => {
   assert.equal(fresh.dirty, true)
 })
 
+test("Session treats __proto__ as an own key, not a prototype mutation", () => {
+  const fromConstructor = new Session(
+    JSON.parse('{"__proto__":{"elevated":true}}') as Record<string, unknown>,
+  )
+  assert.deepEqual(fromConstructor.get("__proto__"), { elevated: true })
+  assert.equal(fromConstructor.get("elevated"), undefined)
+  assert.equal(fromConstructor.has("__proto__"), true)
+  assert.equal(fromConstructor.has("elevated"), false)
+  assert.equal(fromConstructor.get("toString"), undefined)
+  assert.equal(fromConstructor.has("toString"), false)
+
+  const snapshot = fromConstructor.all()
+  assert.equal(Object.getPrototypeOf(snapshot), Object.prototype)
+  assert.equal(Object.hasOwn(snapshot, "__proto__"), true)
+  assert.deepEqual(Object.getOwnPropertyDescriptor(snapshot, "__proto__")?.value, {
+    elevated: true,
+  })
+
+  const session = new Session()
+  session.set("__proto__", { elevated: true })
+  assert.deepEqual(session.get("__proto__"), { elevated: true })
+  assert.equal(session.get("elevated"), undefined)
+  assert.equal(session.has("__proto__"), true)
+  assert.equal(session.has("elevated"), false)
+  session.delete("__proto__")
+  assert.equal(session.get("__proto__"), undefined)
+  assert.equal(session.has("__proto__"), false)
+})
+
+test("Session mantém o token CSRF privado, canonical e rotaciona só explicitamente", () => {
+  const original = Buffer.alloc(32, 7).toString("base64url")
+  const session = new Session({ user: "ada", __jot_csrf: original })
+  assert.equal(session.dirty, false)
+  assert.equal(session.csrfToken(), original)
+  assert.equal(session.verifyCsrfToken(original), true)
+  assert.equal(session.verifyCsrfToken("bad-token"), false)
+  assert.equal(session.verifyCsrfToken(undefined), false)
+  assert.equal(session.get("__jot_csrf"), undefined)
+  assert.equal(session.has("__jot_csrf"), false)
+  assert.deepEqual(session.all(), { user: "ada" })
+  assert.throws(() => session.set("__jot_csrf", "user-value"), /reserved.*csrfToken/)
+  assert.throws(() => session.delete("__jot_csrf"), /reserved.*rotateCsrfToken/)
+
+  const fresh = new Session()
+  assert.equal(fresh.verifyCsrfToken("not-a-token"), false)
+  assert.equal(fresh.dirty, false, "verification must never create a token")
+  const token = fresh.csrfToken()
+  assert.match(token, /^[A-Za-z0-9_-]{43}$/)
+  assert.equal(Buffer.from(token, "base64url").length, 32)
+  assert.equal(fresh.dirty, true)
+  assert.equal(fresh.csrfToken(), token)
+  const rotated = fresh.rotateCsrfToken()
+  assert.notEqual(rotated, token)
+  assert.equal(fresh.verifyCsrfToken(rotated), true)
+})
+
+test("resolveSecret rejeita segredos com menos de 32 bytes UTF-8", () => {
+  assert.throws(() => resolveSecret("short-secret"), /at least 32 UTF-8 bytes/)
+  assert.equal(resolveSecret(SECRET).secret, SECRET)
+})
+
 test("set na sessão emite Set-Cookie assinado (HttpOnly/SameSite=Lax) e o reuso recupera", async () => {
   __clearRegistries()
   class SessionsController extends Controller {
@@ -54,7 +131,7 @@ test("set na sessão emite Set-Cookie assinado (HttpOnly/SameSite=Lax) e o reuso
     }
   }
   registerControllers({ Sessions: SessionsController })
-  const app = createApp({
+  const app = createSessionTestApp({
     routes: routes((r) => {
       r.post("/login", "sessions#login")
       r.get("/me", "sessions#me")
@@ -66,7 +143,8 @@ test("set na sessão emite Set-Cookie assinado (HttpOnly/SameSite=Lax) e o reuso
   const login = await app.request("/login", { method: "POST" })
   assert.equal(login.status, 303)
   assert.equal(login.headers.get("location"), "/")
-  const attributes = login.headers.getSetCookie()[0]!
+  const attributes = login.headers.getSetCookie().at(0)
+  assert.ok(attributes)
   assert.match(attributes, new RegExp(`^${SESSION_COOKIE}=`))
   assert.match(attributes, /HttpOnly/)
   assert.match(attributes, /SameSite=Lax/)
@@ -74,6 +152,56 @@ test("set na sessão emite Set-Cookie assinado (HttpOnly/SameSite=Lax) e o reuso
 
   const me = await app.request("/me", { headers: { cookie: sessionCookie(login) } })
   assert.deepEqual(await me.json(), { user: "ada" })
+})
+
+test("signed session cookie round-trips __proto__ as an own data key", async () => {
+  __clearRegistries()
+  class SessionsController extends Controller {
+    store() {
+      this.session.set("__proto__", { elevated: true })
+      return this.json({
+        elevated: this.session.get("elevated") ?? null,
+        hasProto: this.session.has("__proto__"),
+        hasElevated: this.session.has("elevated"),
+      })
+    }
+    inspect() {
+      return this.json({
+        value: this.session.get("__proto__"),
+        elevated: this.session.get("elevated") ?? null,
+        hasProto: this.session.has("__proto__"),
+        hasElevated: this.session.has("elevated"),
+      })
+    }
+  }
+  registerControllers({ Sessions: SessionsController })
+  const app = createSessionTestApp({
+    routes: routes((r) => {
+      r.post("/session/prototype", "sessions#store")
+      r.get("/session/prototype", "sessions#inspect")
+    }),
+    root,
+    secret: SECRET,
+  })
+
+  const stored = await app.request("/session/prototype", { method: "POST" })
+  assert.equal(stored.status, 200)
+  assert.deepEqual(await stored.json(), {
+    elevated: null,
+    hasProto: true,
+    hasElevated: false,
+  })
+
+  const restored = await app.request("/session/prototype", {
+    headers: { cookie: sessionCookie(stored) },
+  })
+  assert.equal(restored.status, 200)
+  assert.deepEqual(await restored.json(), {
+    value: { elevated: true },
+    elevated: null,
+    hasProto: true,
+    hasElevated: false,
+  })
 })
 
 test("request sem mutação não emite Set-Cookie", async () => {
@@ -142,7 +270,7 @@ test("flash sobrevive ao 303 e é consumido no primeiro render", async () => {
       return `flash:${String(props.flash?.notice ?? "none")}`
     },
   })
-  const app = createApp({
+  const app = createSessionTestApp({
     routes: routes((r) => {
       r.post("/posts", "posts#create")
       r.get("/posts", "posts#index")
@@ -156,13 +284,18 @@ test("flash sobrevive ao 303 e é consumido no primeiro render", async () => {
 
   const first = await app.request("/posts", { headers: { cookie: sessionCookie(created) } })
   assert.equal(await first.text(), "flash:Post created.")
-  // flash consumido: a sessão é reescrita vazia (cookie expirado)
+  // Flash is consumed, but the newly-created synchronizer token keeps the session alive.
   const cleared = first.headers.getSetCookie()
   assert.equal(cleared.length, 1)
-  assert.match(cleared[0]!, new RegExp(`^${SESSION_COOKIE}=`))
+  const clearedCookie = cleared.at(0)
+  assert.ok(clearedCookie)
+  assert.match(clearedCookie, new RegExp(`^${SESSION_COOKIE}=`))
+  assert.match(clearedCookie, /Max-Age=604800/)
+  const cookie = clearedCookie.split(";").at(0)
+  assert.ok(cookie)
 
   const second = await app.request("/posts", {
-    headers: { cookie: cleared[0]!.split(";")[0]! },
+    headers: { cookie },
   })
   assert.equal(await second.text(), "flash:none")
 })
@@ -184,7 +317,7 @@ test("flash também chega ao render automático (sem options)", async () => {
       return props.children
     },
   })
-  const app = createApp({
+  const app = createSessionTestApp({
     routes: routes((r) => {
       r.post("/posts", "posts#create")
       r.get("/posts", "posts#index")
@@ -213,7 +346,7 @@ test("produção sem JOT_SECRET é erro; dev sem segredo avisa e segue", (t) => 
     const warn = t.mock.method(console, "warn", () => {})
     createApp({ routes: routes(() => {}), root })
     assert.equal(warn.mock.calls.length, 1)
-    assert.match(String(warn.mock.calls[0]!.arguments[0]), /JOT_SECRET is not set/)
+    assert.match(String(warn.mock.calls[0]?.arguments[0]), /JOT_SECRET is not set/)
   } finally {
     if (previousEnv === undefined) delete process.env.NODE_ENV
     else process.env.NODE_ENV = previousEnv

@@ -27,7 +27,9 @@ test("as custom define o helper", () => {
     r.get("/about", "pages#about", { as: "about" })
   })
   assert.equal(table.definitions.length, 1)
-  assert.equal(table.definitions[0]!.controllerKey, "Pages")
+  const definition = table.definitions.at(0)
+  assert.ok(definition)
+  assert.equal(definition.controllerKey, "Pages")
   assert.equal(paths.about(), "/about")
 })
 
@@ -135,6 +137,36 @@ test("resource com except remove actions", () => {
   )
 })
 
+test("CSRF exemption de resource só é propagada para métodos mutáveis", () => {
+  const reason = "Verify the provider signature"
+  const table = routes((r) => {
+    r.resource("posts", {
+      only: ["index", "create", "update", "destroy"],
+      csrf: { exempt: true, reason },
+    })
+  })
+  assert.deepEqual(
+    table.definitions.map((definition) => [definition.method, definition.csrf?.reason ?? null]),
+    [
+      ["GET", null],
+      ["POST", reason],
+      ["PUT", reason],
+      ["PATCH", reason],
+      ["DELETE", reason],
+    ],
+  )
+})
+
+test("CSRF exemption exige explicitamente uma razão não vazia", () => {
+  assert.throws(
+    () =>
+      routes((r) => {
+        r.post("/webhook", "webhooks#create", { csrf: { exempt: true, reason: "  " } })
+      }),
+    /requires a non-empty reason/,
+  )
+})
+
 test("resource com only e except juntos é erro", () => {
   assert.throws(
     () =>
@@ -159,9 +191,11 @@ test("resource namespaced gera helpers CamelCase", () => {
   const table = routes((r) => {
     r.resource("admin/posts")
   })
-  assert.equal(table.definitions[0]!.controller, "admin/posts")
-  assert.equal(table.definitions[0]!.controllerKey, "Admin/Posts")
-  assert.equal(table.definitions[0]!.path, "/admin/posts")
+  const definition = table.definitions.at(0)
+  assert.ok(definition)
+  assert.equal(definition.controller, "admin/posts")
+  assert.equal(definition.controllerKey, "Admin/Posts")
+  assert.equal(definition.path, "/admin/posts")
   assert.equal(paths.adminPosts(), "/admin/posts")
   assert.equal(paths.newAdminPost(), "/admin/posts/new")
   assert.equal(paths.adminPost(5), "/admin/posts/5")

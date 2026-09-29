@@ -1,9 +1,33 @@
 {
   "name": "@jot/core",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "The JOT web runtime: routing, controllers, sessions, and server boot.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/core#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "framework",
+    "hono",
+    "typescript",
+    "ssr"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
@@ -16,9 +40,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@jot/db": "*",
-    "@jot/orm": "*",
-    "@jot/views": "*",
+    "@jot/db": "^0.0.0",
+    "@jot/orm": "^0.0.0",
+    "@jot/views": "^0.0.0",
     "hono": "^4.13.9",
     "picocolors": "^1.1.1"
   }

@@ -94,6 +94,7 @@ test("renderView generates the five views", () => {
     form,
     /\{method === "put" \? <input type="hidden" name="_method" value="put" \/> : null\}/,
   )
+  assert.match(form, /<input type="hidden" name="_csrf" value=\{csrfToken\} \/>/)
   assert.match(
     form,
     /<input id="published" type="checkbox" name="published" value="1" checked=\{post\.published === true\} \/>/,
@@ -103,10 +104,14 @@ test("renderView generates the five views", () => {
   assert.doesNotMatch(form, /post\.errors\.body/)
 
   const edit = renderView(POST, "edit")
+  assert.match(edit, /csrfToken: string/)
+  assert.match(edit, /csrfToken=\{csrfToken\}/)
   assert.match(edit, /action=\{paths\.post\(post\.id\)\} method="put"/)
   assert.match(edit, /import PostForm from "\.\/_form\.tsx"/)
 
   const show = renderView(POST, "show")
+  assert.match(show, /csrfToken: string/)
+  assert.match(show, /<input type="hidden" name="_csrf" value=\{csrfToken\} \/>/)
   assert.match(show, /<input type="hidden" name="_method" value="delete" \/>/)
   assert.match(show, /paths\.editPost\(post\.id\)/)
   assert.match(show, /<dd>\{post\.published \? "Yes" : "No"\}<\/dd>/)
@@ -116,6 +121,8 @@ test("renderView generates the five views", () => {
   assert.match(index, /<a href=\{paths\.newPost\(\)\}>New post<\/a>/)
 
   const newView = renderView(POST, "new")
+  assert.match(newView, /csrfToken: string/)
+  assert.match(newView, /csrfToken=\{csrfToken\}/)
   assert.match(newView, /action=\{paths\.posts\(\)\}/)
 })
 

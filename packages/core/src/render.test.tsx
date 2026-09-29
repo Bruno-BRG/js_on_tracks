@@ -9,7 +9,7 @@ import { routes } from "./routes"
 import { createApp } from "./server"
 
 const root = mkdtempSync(join(tmpdir(), "jot-render-"))
-const SECRET = "test-secret"
+const SECRET = "test-secret-for-jot-session-tests-with-32-bytes"
 
 function applicationLayout(props: {
   children?: unknown
