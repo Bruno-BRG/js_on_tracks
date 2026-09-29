@@ -1,4 +1,4 @@
-# JOT — Contrato de Arquitetura (M0/M1)
+# JOT — Contrato de Arquitetura (versão 1.0)
 
 Documento **normativo**. Se o código divergir daqui, o código está errado — ou este documento deve ser
 atualizado de propósito, nunca por acidente.
@@ -8,13 +8,13 @@ atualizado de propósito, nunca por acidente.
 | Área | Decisão |
 |---|---|
 | HTTP | Hono (`hono` + `@hono/node-server`), controllers JOT por cima |
-| UI | JSX SSR próprio (`@jot/views`), HTMX-like (`jot-*`), zero JS no cliente por padrão |
-| ORM | `@jot/db` (schema DSL → Drizzle) + `@jot/orm` (ActiveRecord) |
+| UI | JSX SSR próprio (`@js_on_tracks/views`), HTMX-like (`jot-*`), zero JS no cliente por padrão |
+| ORM | `@js_on_tracks/db` (schema DSL → Drizzle) + `@js_on_tracks/orm` (ActiveRecord) |
 | Rotas | DSL em `config/routes.ts` (`r.resource("posts")`) + `paths` |
 | Banco dev | SQLite via `node:sqlite` (builtin), através de um `Driver` próprio + `drizzle-orm/sqlite-proxy` |
-| Migrations | Arquivos `.sql` puros aplicados pelo runner próprio do `@jot/db` |
+| Migrations | Arquivos `.sql` puros aplicados pelo runner próprio do `@js_on_tracks/db` |
 | Execução | Node >= 24; app roda via `tsx` (dev) — sem bundling nesta fase |
-| Distribuição | npm, open source; nomes: `jot-framework` (meta), `create-jot`, `@jot/*` internos |
+| Distribuição | npm; pacotes públicos `jot-framework`, `create-jot` e `@js_on_tracks/{cli,core,db,orm,views}` |
 
 ## 1. Convenções gerais
 
@@ -33,18 +33,18 @@ atualizado de propósito, nunca por acidente.
 ## 2. Mapa do repositório
 
 ```
-packages/db          @jot/db         schema DSL, Driver sqlite, createDatabase, migrations
-packages/orm         @jot/orm        Model (ActiveRecord), validações, operadores Drizzle re-export
-packages/views       @jot/views      runtime JSX SSR, renderToString, jsx-runtime, script cliente
-packages/core        @jot/core       defineApp/defineDatabase, routes DSL, Controller, start(), registry
-packages/cli         @jot/cli        binário `jot`, collect/manifest, comandos, templates/app
+packages/db          @js_on_tracks/db         schema DSL, Driver sqlite, createDatabase, migrations
+packages/orm         @js_on_tracks/orm        Model (ActiveRecord), validações, operadores Drizzle re-export
+packages/views       @js_on_tracks/views      runtime JSX SSR, renderToString, jsx-runtime, script cliente
+packages/core        @js_on_tracks/core       defineApp/defineDatabase, routes DSL, Controller, start(), registry
+packages/cli         @js_on_tracks/cli        binário `jot`, collect/manifest, comandos, templates/app
 packages/testing     @jot/testing    helpers para apps (stub em M1)
 packages/jot-framework  jot-framework  meta-pacote: re-exporta core+db+orm+views (import único do usuário)
 packages/create-jot  create-jot      `npm create jot@latest`
 examples/blog        app de referência (dogfooding)
 ```
 
-Import do usuário é **sempre** `jot-framework` (nunca `@jot/core` direto), exceto `@jot/views`
+Import do usuário é **sempre** `jot-framework` (nunca `@js_on_tracks/core` direto), exceto `@js_on_tracks/views`
 no `jsxImportSource`.
 
 ## 3. App gerado (template)
@@ -53,8 +53,9 @@ no `jsxImportSource`.
 
 ```
 myapp/
-├─ package.json          type: module; deps: jot-framework; devDeps: tsx, typescript, @types/node
-├─ tsconfig.json         strict, moduleResolution bundler, jsx react-jsx, jsxImportSource @jot/views,
+├─ package.json          type: module; deps: jot-framework; devDeps: @js_on_tracks/cli, drizzle-kit, tsx,
+│                        typescript, @types/node
+├─ tsconfig.json         strict, moduleResolution bundler, jsx react-jsx, jsxImportSource @js_on_tracks/views,
 │                        allowImportingTsExtensions: true, noEmit: true
 ├─ .env                  PORT=3000, DATABASE_URL=./db/dev.sqlite, JOT_SECRET=<random>
 ├─ .gitignore            node_modules, .jot, *.sqlite, .env
@@ -80,11 +81,11 @@ Nomes de arquivos: `snake_case` (`posts_controller.ts`, `home/index.tsx`). Contr
 
 ## 4. Contratos de API
 
-### 4.1 `@jot/db`
+### 4.1 `@js_on_tracks/db`
 
 ```ts
 // Schema DSL (compila para drizzle-orm/sqlite-core)
-import { table, id, string, text, boolean, integer, real, json, timestamps, refs } from "@jot/db"
+import { table, id, string, text, boolean, integer, real, json, timestamps, refs } from "@js_on_tracks/db"
 
 export const posts = table("posts", {
   id: id(),                                   // integer PK autoincrement, JS key "id"
@@ -106,7 +107,7 @@ Regras:
 
 ```ts
 // Banco
-import { createDatabase, setDefaultDatabase, getDefaultDatabase } from "@jot/db"
+import { createDatabase, setDefaultDatabase, getDefaultDatabase } from "@js_on_tracks/db"
 
 const db = createDatabase({
   url: "./db/dev.sqlite",            // caminho ou file:... → SQLite (node:sqlite)
@@ -119,7 +120,7 @@ await db.migrate()                    // aplica *.sql em ordem lexicográfica; t
 await db.rollback(1)                  // desfaz N (default 1) usando a seção "-- jot:down"
 await db.exec("select 1")             // SQL cru no driver
 await db.close()
-db.drizzle                            // instância Drizzle para o @jot/orm
+db.drizzle                            // instância Drizzle para o @js_on_tracks/orm
 setDefaultDatabase(db) / getDefaultDatabase()
 ```
 
@@ -131,7 +132,7 @@ Regras de migration:
 - Migrations rodam no **driver cru**, não via Drizzle.
 - `createDatabase` com `url` postgres → erro didático "Postgres support arrives in M3; use SQLite for now."
 
-`Driver` (interface pública, `@jot/db`):
+`Driver` (interface pública, `@js_on_tracks/db`):
 ```ts
 interface Driver {
   query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>
@@ -148,10 +149,10 @@ sqliteDriver({ file }): Driver      // node:sqlite DatabaseSync
 `DatabaseOptions` extras aprovados: `root?` (ancia o default de `migrationsDir`), `logParams?` (default
 `true`; `false` omite os params do log), `schema?` (opcional; só para o API relacional do Drizzle).
 
-### 4.2 `@jot/orm`
+### 4.2 `@js_on_tracks/orm`
 
 ```ts
-import { Model, presence, minLength, maxLength, format, eq, gt, and, or, desc } from "@jot/orm"
+import { Model, presence, minLength, maxLength, format, eq, gt, and, or, desc } from "@js_on_tracks/orm"
 
 export class Post extends Model<typeof posts> {
   static readonly table = posts
@@ -185,19 +186,19 @@ await post.destroy()                // delete
 ```
 
 Regras:
-- Só usa o banco via `getDefaultDatabase()` (setado pelo `@jot/core` no boot). Se não houver banco,
+- Só usa o banco via `getDefaultDatabase()` (setado pelo `@js_on_tracks/core` no boot). Se não houver banco,
   erro didático ("No database configured; define config/database.ts or call setDefaultDatabase().").
 - `save()` valida antes de persistir; `errors` limpa a cada validação.
 - Validações M1: `presence`, `minLength(n)`, `maxLength(n)`, `format(regex, message?)`.
 - `where`/`findBy` aceitam apenas igualdade por campo; callback recebe as colunas Drizzle para
   operadores avançados.
-- Associações ficam para M2 (não implementar agora).
+- Associações Active Record não fazem parte da versão 1.0; ficam planejadas para uma versão futura.
 - Inferência de tipos é requisito: `const p = await Post.find(1); p.title` deve compilar sem `declare`.
 
-### 4.3 `@jot/views`
+### 4.3 `@js_on_tracks/views`
 
-- JSX **automático**: exporta `@jot/views/jsx-runtime` (`jsx`, `jsxs`, `Fragment`) e
-  `@jot/views/jsx-dev-runtime`.
+- JSX **automático**: exporta `@js_on_tracks/views/jsx-runtime` (`jsx`, `jsxs`, `Fragment`) e
+  `@js_on_tracks/views/jsx-dev-runtime`.
 - Chaves comuns: `{ "exports": { ".": "./src/index.ts", "./jsx-runtime": "./src/jsx-runtime.ts", "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts" } }`.
 - `renderToString(vnode): Promise<string>` — resolve componentes **assíncronos** (await em promises
   dentro da árvore), escapa texto e atributos, ignora `null/undefined/false`, renderiza números e
@@ -213,11 +214,11 @@ Regras:
   faz `fetch`, aplica swap, e cai no comportamento nativo se `jot-target` ausente. ~100 linhas, sem deps.
 - Sem estado, sem hooks, sem reatividade no M1 — SSR puro.
 
-### 4.4 `@jot/core`
+### 4.4 `@js_on_tracks/core`
 
 ```ts
 import { defineApp, defineDatabase, routes, Controller, paths, env, start,
-         registerControllers, registerViews } from "@jot/core"
+         registerControllers, registerViews } from "@js_on_tracks/core"
 
 // config/app.ts
 export default defineApp({ name: "blog" })
@@ -330,18 +331,19 @@ await start({ app, routes, database, root: process.cwd(), port? })
 ### 4.5 `jot-framework`
 
 ```ts
-export * from "@jot/core"
-export * from "@jot/db"
-export * from "@jot/orm"
+export * from "@js_on_tracks/core"
+export * from "@js_on_tracks/db"
+export * from "@js_on_tracks/orm"
+export * from "@js_on_tracks/views"
 ```
 
-### 4.6 `@jot/cli`
+### 4.6 `@js_on_tracks/cli`
 
 Bin: `jot`. Estrutura: `bin/jot.js` (JS puro) → importa `dist/cli.js` se existir, senão registra
 `tsx` (`tsx/esm/api` → `register()`) e importa `src/main.ts`. Toda execução de código do **app**
 acontece em processo filho `node --import tsx` (o CLI nunca importa o app diretamente).
 
-Comandos M1:
+Comandos públicos da versão 1.0:
 - `jot new <nome> [--no-install]` — copia `templates/app`, substitui `__APP_NAME__`, roda `npm install`
   (pulado com `--no-install`).
 - `jot server` — `collect` + spawn `node --disable-warning=ExperimentalWarning --import tsx --watch --enable-source-maps .jot/entry.ts`
@@ -387,7 +389,7 @@ Regras:
 ### 4.7 `create-jot`
 
 Bin `create-jot` (JS puro, mesmo padrão do bin do CLI): pergunta o nome do projeto (ou usa `argv[2]`),
-chama a mesma função `newProject()` do `@jot/cli`. `npm create jot@latest blog` precisa funcionar.
+chama a mesma função `newProject()` do `@js_on_tracks/cli`. `npm create jot@latest blog` precisa funcionar.
 
 ## 5. Fluxo de `jot server`
 
@@ -402,20 +404,17 @@ spawn: node --import tsx --watch --enable-source-maps .jot/entry.ts
 - Criou/removeu controller ou view → reinicie `jot server` (o manifest é regenerado só no boot do CLI);
   o erro de view/controller ausente deve dizer isso explicitamente.
 
-## 6. Formato do e2e dourado (M1)
+## 6. E2E dourado e exemplo público (versão 1.0)
 
-`packages/cli/test/e2e.test.ts` (executado com `--test` pelo pacote do CLI):
+`packages/cli/test/e2e.test.ts` verifica o fluxo do gerador de scaffold:
 
-1. Cria app real em `<repo>/.tmp-e2e/<random>/blog` via `newProject(name, { install: false })`.
-2. Copia fixtures `packages/cli/test/fixtures/blog/**` sobre o app (controller, model, views,
-   `db/schema.ts` com `posts`, `db/migrate/0001_create_posts.sql`, rotas extras).
-3. Roda `jot db:migrate` (spawn do CLI) → espera output com "applied 0001".
-4. Sobe `jot server` com `PORT` aleatório (porta livre) e espera a linha de listening (timeout 30s).
-5. `GET /` → 200, HTML contém "Hello from JOT".
-6. `GET /posts` → 200, contém um post inserido pela migration (seed no SQL).
-7. `POST /posts` (form urlencoded) → 303 redirect para `/posts/:id`; `GET` no destino mostra o post.
-8. `GET /posts/99999` → 404 com página amigável.
-9. Mata o servidor e limpa a pasta temporária (mesmo em falha).
+1. Cria um app em diretório temporário e executa `jot generate scaffold` para um recurso com colunas tipadas.
+2. Verifica o typecheck do app e aplica a migration SQLite com `jot db:migrate`.
+3. Sobe `jot server` em porta livre e cobre listagem, formulário, criação, edição, atualização e exclusão.
+4. Confirma que POST sem token CSRF retorna `403`, que os formulários enviam token e que recursos ausentes retornam `404`.
+5. Encerra o servidor e remove os arquivos temporários mesmo em caso de falha.
+
+`examples/blog` mantém um app equivalente usando somente as APIs públicas. O smoke test executa migrations e CRUD/CSRF sem rede.
 
 ## 7. Testes
 
@@ -425,11 +424,15 @@ spawn: node --import tsx --watch --enable-source-maps .jot/entry.ts
   o e2e dourado é a prova de integração.
 - Sem rede nos testes.
 
-## 8. Escopo desta fase (NÃO fazer agora)
+## 8. Escopo da versão 1.0
 
-Associações, callbacks, sessions em banco, generators/scaffold (M2), jobs, mailer, uploads,
-Postgres, bundling de produção, publicação npm, i18n, ilhas/client components.
+Incluídos: generators de model e scaffold, app de referência `examples/blog`, publicação npm dos sete pacotes públicos e documentação em português e inglês. `@jot/testing` segue privado e não é publicado.
+
+Ficam para versões futuras: associações Active Record, callbacks, sessões em banco, jobs, mailer,
+uploads, Postgres, bundling de produção, i18n do runtime e ilhas/client components.
 
 ## 9. Definição de pronto
 
-`npm run typecheck` e `npm test` verdes na raiz (Windows), e o e2e dourado da seção 6 passando.
+`npm run typecheck`, `npm test`, `npm run lint` e `npm run check:packs` verdes. O e2e dourado e o smoke de `examples/blog` passam em Windows e Linux com Node.js 24. Cada tarball contém README em inglês e português, licença MIT e os entrypoints necessários; não contém testes, fixtures ou `tsconfig.json`.
+
+A publicação de cada versão roda em workflow separado, depois de aprovação do ambiente GitHub `npm-publish`, usando npm Trusted Publishing/OIDC. O maintainer configura aprovação obrigatória no ambiente e vínculo de trusted publisher para cada pacote; nenhum token npm de longa duração é usado. Consulte o [guia de release](releasing.md).

@@ -1,6 +1,6 @@
 import { createRequire } from "node:module"
 import { createInterface } from "node:readline/promises"
-import { CliError, newProject, printError } from "@jot/cli"
+import { CliError, newProject, printError } from "@js_on_tracks/cli"
 
 /** Saída de mensagens do create-jot (injetável em testes). */
 export interface CreateJotOutput {

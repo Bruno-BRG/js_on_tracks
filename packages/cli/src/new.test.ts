@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { existsSync } from "node:fs"
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
+import { EOL, tmpdir } from "node:os"
 import { extname, join } from "node:path"
 import { test } from "node:test"
 import { newProject } from "./commands/new"
@@ -36,15 +36,24 @@ test("newProject copies the template and replaces __APP_NAME__", async () => {
     assert.deepEqual(await findLeftovers(result.dir), [])
 
     const env = await readFile(join(result.dir, ".env"), "utf8")
-    assert.match(env, /^PORT=3000$/m)
-    assert.match(env, /^JOT_SECRET=[0-9a-f]{64}$/m)
-    const secret = /^JOT_SECRET=([0-9a-f]{64})$/m.exec(env)?.[1]
+    assert.match(env, /^PORT=3000\r?$/m)
+    assert.match(env, /^JOT_SECRET=[0-9a-f]{64}\r?$/m)
+    const secret = /^JOT_SECRET=([0-9a-f]{64})\r?$/m.exec(env)?.[1]
     assert.ok(secret)
     assert.notEqual(secret, "dev-secret-change-me")
     assert.doesNotMatch(env, /dev-secret-change-me/)
     const envExample = await readFile(join(result.dir, ".env.example"), "utf8")
     assert.doesNotMatch(envExample, /^JOT_SECRET=/m)
+    const expectedNewline = envExample.match(/\r\n|\n|\r/)?.[0] ?? EOL
+    const envNewlines = env.match(/\r\n|\n|\r/g) ?? []
+    assert.ok(envNewlines.length > 0)
+    assert.ok(envNewlines.every((newline) => newline === expectedNewline))
     assert.ok(existsSync(join(result.dir, "tsconfig.json")))
+    assert.ok(existsSync(join(result.dir, ".gitignore")))
+    const gitignore = await readFile(join(result.dir, ".gitignore"), "utf8")
+    assert.match(gitignore, /(?:^|\r?\n)\.env(?:\r?\n|$)/)
+    assert.match(gitignore, /(?:^|\r?\n)node_modules\/(?:\r?\n|$)/)
+    assert.ok(!existsSync(join(result.dir, "_gitignore")))
     assert.ok(existsSync(join(result.dir, "drizzle.config.ts")))
     assert.ok(existsSync(join(result.dir, "app", "controllers", "home_controller.ts")))
     assert.ok(existsSync(join(result.dir, "app", "views", "layouts", "application.tsx")))

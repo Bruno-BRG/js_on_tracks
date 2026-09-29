@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "../naming"
 
 /**
- * Singular simples espelhando `@jot/core/src/naming.ts`:
+ * Singular simples espelhando `@js_on_tracks/core/src/naming.ts`:
  * `ies$` → `y`; `(s|x|z|ch|sh)es$` → remove `es`; `s$` → remove `s`.
  */
 export function singularize(name: string): string {
@@ -18,7 +18,7 @@ export function pluralize(name: string): string {
   return `${name}s`
 }
 
-/** `author_id` → `authorId`-style: espelha o `toSnakeCase` do `@jot/db` (colunas). */
+/** `author_id` → `authorId`-style: espelha o `toSnakeCase` do `@js_on_tracks/db` (colunas). */
 export function snakeCase(value: string): string {
   return value
     .replace(/([A-Z]+)([A-Z][a-z])/g, "$1_$2")

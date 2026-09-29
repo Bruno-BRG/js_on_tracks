@@ -1,18 +1,13 @@
 # __APP_NAME__
 
-App JOT (JS on Tracks).
+A JOT TypeScript web app.
 
-```bash
-npm run dev        # http://localhost:3000
-npm run migrate    # aplica db/migrate/*.sql
-npm run routes     # lista as rotas
-npm run console    # REPL com db, models e paths
+```sh
+npm run migrate
+npm run dev
 ```
 
-- Rotas: `config/routes.ts`
-- Schema do banco: `db/schema.ts` (+ `npm run generate` para criar a migration)
-- Controllers: `app/controllers`
-- Views: `app/views` (JSX, SSR)
+Generate a full CRUD resource with `npx jot generate scaffold post title:string! body:text`, then run `npm run migrate` and restart the server. JOT protects `POST`, `PUT`, `PATCH`, and `DELETE` requests with CSRF tokens by default. Generated forms include the token automatically; manual forms should render the `csrfToken` prop as a hidden `_csrf` field.
 
 ## CSRF protection
 
@@ -47,8 +42,4 @@ Disabling CSRF globally is discouraged. It requires a reviewed reason in `config
 csrf: { enabled: false, reason: "Bearer-authenticated API; no cookie authentication" }
 ```
 
-## Development inside the JOT monorepo (M1)
-
-`jot-framework` is not published on npm yet. Until it is, create apps with
-`jot new <name> --no-install` and run `npm install` from the repository root so the
-workspace packages resolve. Published packages arrive in a later milestone.
+Requires Node.js 24 or newer. See the [JOT guide](https://github.com/Bruno-BRG/js_on_tracks#readme) and the [blog example](https://github.com/Bruno-BRG/js_on_tracks/tree/master/examples/blog).

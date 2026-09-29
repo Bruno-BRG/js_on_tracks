@@ -1,5 +1,5 @@
 /**
- * Símbolos, tipos e helpers compartilhados pelo runtime JSX do `@jot/views`.
+ * Símbolos, tipos e helpers compartilhados pelo runtime JSX do `@js_on_tracks/views`.
  *
  * Este módulo é a base comum de `jsx-runtime`, `jsx-dev-runtime`, `render` e `index`
  * e de propósito não importa nenhum outro módulo do pacote, para não criar ciclos.

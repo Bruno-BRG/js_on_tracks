@@ -1,9 +1,33 @@
 {
-  "name": "@jot/orm",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@js_on_tracks/orm",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "Active Record models and validations for JOT.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/orm"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/orm#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "orm",
+    "activerecord",
+    "sqlite",
+    "drizzle"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
@@ -15,7 +39,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/db": "*",
+    "@js_on_tracks/db": "^1.0.0",
     "drizzle-orm": "^0.45.3"
   }
 }

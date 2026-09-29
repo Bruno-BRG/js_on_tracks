@@ -1,9 +1,33 @@
 {
-  "name": "@jot/views",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@js_on_tracks/views",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "Server-rendered JSX runtime and progressive HTML interactions for JOT.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/views"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/views#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "jsx",
+    "ssr",
+    "views",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },

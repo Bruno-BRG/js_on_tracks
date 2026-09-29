@@ -1,7 +1,16 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises"
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { test } from "node:test"
@@ -146,7 +155,7 @@ test("CLI validation failures preserve every app file byte-for-byte", {
     assert.equal(result.code, 1)
     assert.match(
       result.stderr,
-      /Field "save" is reserved because it conflicts with the @jot\/orm Model API/,
+      /Field "save" is reserved because it conflicts with the @js_on_tracks\/orm Model API/,
     )
     assert.deepEqual(await snapshotFiles(appDir), before)
     assert.ok(!existsSync(join(appDir, "app", "models", "post.ts")))
@@ -447,7 +456,7 @@ test("a failed lock-record write keeps the uncertain partial lock for manual rec
   timeout: 60_000,
 }, async () => {
   const { base, appDir } = await makeApp()
-  const lockPath = join(appDir, ...GENERATION_LOCK_RELATIVE_PATH.split("/"))
+  const lockPath = join(await realpath(appDir), ...GENERATION_LOCK_RELATIVE_PATH.split("/"))
   try {
     await assert.rejects(
       acquireGenerationLockWithWriter(appDir, async (handle, contents) => {

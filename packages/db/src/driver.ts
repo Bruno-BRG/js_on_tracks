@@ -33,7 +33,7 @@ export interface SqliteDriverOptions {
   file: string
 }
 
-/** Erro didático do `@jot/db`: toda mensagem diz o que fazer. */
+/** Erro didático do `@js_on_tracks/db`: toda mensagem diz o que fazer. */
 export function databaseError(message: string): Error {
   return new Error(`[jot/db] ${message}`)
 }

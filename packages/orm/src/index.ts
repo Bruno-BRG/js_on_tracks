@@ -1,7 +1,7 @@
-// API pública do `@jot/orm` (contrato §4.2).
+// API pública do `@js_on_tracks/orm` (contrato §4.2).
 //
 // `database.ts`, `query.ts` e `test-fixtures.ts` são internos: o acesso ao banco é sempre
-// pelo `getDefaultDatabase()` do `@jot/db`, setado pelo `@jot/core` no boot.
+// pelo `getDefaultDatabase()` do `@js_on_tracks/db`, setado pelo `@js_on_tracks/core` no boot.
 
 export type { SQL } from "drizzle-orm"
 // Operadores aceitos nos callbacks de `where`/`count` (re-export da dependência declarada).

@@ -20,3 +20,6 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - run: npm run lint
+      - run: npm run check:packs
+      - run: node node_modules/typescript/bin/tsc --noEmit -p examples/blog/tsconfig.json

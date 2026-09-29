@@ -68,7 +68,7 @@ const RESOURCE_ACTIONS = ["index", "new", "create", "show", "edit", "update", "d
 
 /**
  * Insert only after proving the full JOT routes callback belongs to the supported,
- * statically analyzable subset. TypeScript is resolved from the app, not @jot/cli.
+ * statically analyzable subset. TypeScript is resolved from the app, not @js_on_tracks/cli.
  */
 export async function insertResourceWithAst(
   source: string,

@@ -1,4 +1,4 @@
-// Asserções de tipo do `@jot/orm` — verificadas por `npm run typecheck` (`tsx` não checa tipos).
+// Asserções de tipo do `@js_on_tracks/orm` — verificadas por `npm run typecheck` (`tsx` não checa tipos).
 // As chamadas ficam dentro de uma função que nunca roda no teste: o `@ts-expect-error` cobre
 // o erro de compilação e o runtime não toca no banco.
 

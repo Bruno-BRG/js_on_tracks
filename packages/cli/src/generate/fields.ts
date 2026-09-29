@@ -25,7 +25,7 @@ export interface FieldSpec {
   readonly name: string
   /** Nome como digitado (`author_id`), usado nas mensagens. */
   readonly rawName: string
-  /** Coluna SQL (`author_id`), derivada pelo `toSnakeCase` do `@jot/db`. */
+  /** Coluna SQL (`author_id`), derivada pelo `toSnakeCase` do `@js_on_tracks/db`. */
   readonly column: string
   /** Rótulo humano (`Author id`). */
   readonly label: string
@@ -79,7 +79,7 @@ export function parseField(token: string): FieldSpec {
   }
   if (ORM_INSTANCE_MEMBERS.has(name)) {
     throw new CliError(
-      `Field "${rawName}" is reserved because it conflicts with the @jot/orm Model API. Choose a different field name.`,
+      `Field "${rawName}" is reserved because it conflicts with the @js_on_tracks/orm Model API. Choose a different field name.`,
     )
   }
   if (RESERVED_BINDING_IDENTIFIERS.has(name)) {

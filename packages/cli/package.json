@@ -1,9 +1,35 @@
 {
-  "name": "@jot/cli",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@js_on_tracks/cli",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "The JOT command-line tools and project generators.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/cli#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "framework",
+    "cli",
+    "typescript",
+    "scaffold"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates/app",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },

@@ -1,5 +1,5 @@
 /**
- * Runtime JSX automático de desenvolvimento do `@jot/views`
+ * Runtime JSX automático de desenvolvimento do `@js_on_tracks/views`
  * (`"jsx": "react-jsxdev"`).
  *
  * `jsxDEV` responde à mesma assinatura do `jsx` mais os argumentos de debug

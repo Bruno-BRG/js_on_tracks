@@ -1,0 +1,5 @@
+**/*.test.ts
+**/*.test.tsx
+src/generate/public-api.typecheck.ts
+test/
+tsconfig.json

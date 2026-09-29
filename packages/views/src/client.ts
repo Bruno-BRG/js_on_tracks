@@ -1,5 +1,5 @@
 /**
- * Script do cliente servido pelo `@jot/core` em `/_jot/jot.js`.
+ * Script do cliente servido pelo `@js_on_tracks/core` em `/_jot/jot.js`.
  *
  * Sem dependências, JS puro (ES5-friendly) e idempotente. Intercepta o submit de
  * `<form>` com `jot-method` (`post|put|patch|delete`, ou o campo oculto `_method`):

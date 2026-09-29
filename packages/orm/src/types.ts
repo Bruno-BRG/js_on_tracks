@@ -1,4 +1,4 @@
-// Tipos públicos do `@jot/orm` (contrato §4.2).
+// Tipos públicos do `@js_on_tracks/orm` (contrato §4.2).
 //
 // A inferência dos estáticos vem de `this: C extends ModelClass` + `RecordOf<C>`:
 // `Post.find(1)` devolve `Post & Row<typeof posts> | null` sem nenhum `declare` manual.

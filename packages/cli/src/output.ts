@@ -30,7 +30,7 @@ export function printError(error: CliError): void {
 
 let cachedVersion: string | undefined
 
-/** Versão do próprio `@jot/cli` (`package.json`), usada em `--version` e no banner do server. */
+/** Versão do próprio `@js_on_tracks/cli` (`package.json`), usada em `--version` e no banner do server. */
 export function cliVersion(): string {
   if (cachedVersion === undefined) {
     const require = createRequire(import.meta.url)

@@ -1,5 +1,5 @@
 // Consultas do ORM sobre o Drizzle: normalização de filtros/ordenação, SELECT/COUNT e
-// INSERT/UPDATE/DELETE com `returning()` (SQLite suporta — confirmado no spike do `@jot/db`).
+// INSERT/UPDATE/DELETE com `returning()` (SQLite suporta — confirmado no spike do `@js_on_tracks/db`).
 
 import { and, asc, count, desc, eq, getTableColumns, getTableName, type SQL } from "drizzle-orm"
 import {
