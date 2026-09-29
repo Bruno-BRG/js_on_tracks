@@ -1,0 +1,125 @@
+name: Publish npm packages
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - packages/cli/package.json
+      - packages/core/package.json
+      - packages/create-jot/package.json
+      - packages/db/package.json
+      - packages/jot-framework/package.json
+      - packages/orm/package.json
+      - packages/views/package.json
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: "Run the protected one-time 1.0.0 bootstrap checks before interactive publishing"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency: npm-publish-${{ github.ref }}
+
+jobs:
+  preflight:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.versions.outputs.changed }}
+      base: ${{ steps.versions.outputs.base }}
+      head: ${{ steps.versions.outputs.head }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect public package version changes
+        id: versions
+        env:
+          RELEASE_BASE_SHA: ${{ github.event.before }}
+          RELEASE_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/release-preflight.mjs
+
+  bootstrap-preflight:
+    if: github.event_name == 'workflow_dispatch' && inputs.bootstrap && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.validate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Require initial versions and pin the evaluated commit
+        id: validate
+        env:
+          BOOTSTRAP_SHA: ${{ github.sha }}
+        run: node scripts/check-bootstrap-versions.mjs
+
+  bootstrap-checks:
+    needs: bootstrap-preflight
+    if: github.event_name == 'workflow_dispatch' && inputs.bootstrap && github.ref == 'refs/heads/master' && needs.bootstrap-preflight.outputs.sha == github.sha
+    environment:
+      name: npm-publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bootstrap-preflight.outputs.sha }}
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run lint
+      - run: npm run check:packs
+      - run: node node_modules/typescript/bin/tsc --noEmit -p examples/blog/tsconfig.json
+      - name: Confirm npm version for the later OIDC workflow
+        run: npm run check:npm-version
+      - name: Record the approved bootstrap source SHA
+        env:
+          BOOTSTRAP_SHA: ${{ needs.bootstrap-preflight.outputs.sha }}
+        run: node scripts/check-bootstrap-versions.mjs
+      - name: Report manual first-publish requirement
+        run: echo "Checks passed. npm requires a maintainer to create each package with an interactive 2FA publish before Trusted Publishing can be configured. This job did not publish packages."
+
+  publish:
+    needs: preflight
+    if: needs.preflight.outputs.changed == 'true' && vars.NPM_TRUSTED_PUBLISHING_READY == 'true'
+    # Configure this GitHub Environment with required reviewers before enabling releases.
+    environment:
+      name: npm-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.head }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Require an npm CLI that supports trusted publishing
+        run: npm run check:npm-version
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run lint
+      - run: npm run check:packs
+      - name: Publish only packages whose versions changed
+        env:
+          RELEASE_BASE_SHA: ${{ needs.preflight.outputs.base }}
+          RELEASE_HEAD_SHA: ${{ needs.preflight.outputs.head }}
+        run: npm run release:publish

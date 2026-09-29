@@ -1,0 +1,29 @@
+name: Changesets
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency: changesets-${{ github.ref }}
+
+jobs:
+  version:
+    if: github.repository == 'Bruno-BRG/js_on_tracks'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Create or update the package version pull request
+        uses: changesets/action@v2
+        with:
+          pr-title: "chore: version packages"
+          commit-message: "chore: version packages"
+          version-script: "npm run release:version"

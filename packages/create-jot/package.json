@@ -1,9 +1,31 @@
 {
   "name": "create-jot",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "Create a new JOT TypeScript web application.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/create-jot"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/create-jot#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "framework",
+    "create",
+    "scaffold",
+    "typescript"
+  ],
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
@@ -15,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/cli": "*",
+    "@jot/cli": "^0.0.0",
     "tsx": "^4.23.15"
   },
   "bin": {

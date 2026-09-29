@@ -15,11 +15,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "jot-framework": "*"
+    "jot-framework": "^1.0.0"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "tsx": "latest",
-    "typescript": "latest"
+    "@jot/cli": "^1.0.0",
+    "@types/node": "^26.6.3",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }

@@ -1,9 +1,30 @@
 {
   "name": "jot-framework",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "The batteries-included JOT TypeScript web framework.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/jot-framework"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/jot-framework#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "framework",
+    "rails",
+    "typescript",
+    "ssr"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
@@ -15,9 +36,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/core": "*",
-    "@jot/db": "*",
-    "@jot/orm": "*",
-    "@jot/views": "*"
+    "@jot/core": "^0.0.0",
+    "@jot/db": "^0.0.0",
+    "@jot/orm": "^0.0.0",
+    "@jot/views": "^0.0.0"
   }
 }

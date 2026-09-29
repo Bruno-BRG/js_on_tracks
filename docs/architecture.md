@@ -1,4 +1,4 @@
-# JOT — Contrato de Arquitetura (M0/M1)
+# JOT — Contrato de Arquitetura (versão 1.0)
 
 Documento **normativo**. Se o código divergir daqui, o código está errado — ou este documento deve ser
 atualizado de propósito, nunca por acidente.
@@ -14,7 +14,7 @@ atualizado de propósito, nunca por acidente.
 | Banco dev | SQLite via `node:sqlite` (builtin), através de um `Driver` próprio + `drizzle-orm/sqlite-proxy` |
 | Migrations | Arquivos `.sql` puros aplicados pelo runner próprio do `@jot/db` |
 | Execução | Node >= 24; app roda via `tsx` (dev) — sem bundling nesta fase |
-| Distribuição | npm, open source; nomes: `jot-framework` (meta), `create-jot`, `@jot/*` internos |
+| Distribuição | npm; pacotes públicos `jot-framework`, `create-jot` e `@jot/{cli,core,db,orm,views}` |
 
 ## 1. Convenções gerais
 
@@ -53,7 +53,8 @@ no `jsxImportSource`.
 
 ```
 myapp/
-├─ package.json          type: module; deps: jot-framework; devDeps: tsx, typescript, @types/node
+├─ package.json          type: module; deps: jot-framework; devDeps: @jot/cli, drizzle-kit, tsx,
+│                        typescript, @types/node
 ├─ tsconfig.json         strict, moduleResolution bundler, jsx react-jsx, jsxImportSource @jot/views,
 │                        allowImportingTsExtensions: true, noEmit: true
 ├─ .env                  PORT=3000, DATABASE_URL=./db/dev.sqlite, JOT_SECRET=<random>
@@ -191,7 +192,7 @@ Regras:
 - Validações M1: `presence`, `minLength(n)`, `maxLength(n)`, `format(regex, message?)`.
 - `where`/`findBy` aceitam apenas igualdade por campo; callback recebe as colunas Drizzle para
   operadores avançados.
-- Associações ficam para M2 (não implementar agora).
+- Associações Active Record não fazem parte da versão 1.0; ficam planejadas para uma versão futura.
 - Inferência de tipos é requisito: `const p = await Post.find(1); p.title` deve compilar sem `declare`.
 
 ### 4.3 `@jot/views`
@@ -333,6 +334,7 @@ await start({ app, routes, database, root: process.cwd(), port? })
 export * from "@jot/core"
 export * from "@jot/db"
 export * from "@jot/orm"
+export * from "@jot/views"
 ```
 
 ### 4.6 `@jot/cli`
@@ -341,7 +343,7 @@ Bin: `jot`. Estrutura: `bin/jot.js` (JS puro) → importa `dist/cli.js` se exist
 `tsx` (`tsx/esm/api` → `register()`) e importa `src/main.ts`. Toda execução de código do **app**
 acontece em processo filho `node --import tsx` (o CLI nunca importa o app diretamente).
 
-Comandos M1:
+Comandos públicos da versão 1.0:
 - `jot new <nome> [--no-install]` — copia `templates/app`, substitui `__APP_NAME__`, roda `npm install`
   (pulado com `--no-install`).
 - `jot server` — `collect` + spawn `node --disable-warning=ExperimentalWarning --import tsx --watch --enable-source-maps .jot/entry.ts`
@@ -402,20 +404,17 @@ spawn: node --import tsx --watch --enable-source-maps .jot/entry.ts
 - Criou/removeu controller ou view → reinicie `jot server` (o manifest é regenerado só no boot do CLI);
   o erro de view/controller ausente deve dizer isso explicitamente.
 
-## 6. Formato do e2e dourado (M1)
+## 6. E2E dourado e exemplo público (versão 1.0)
 
-`packages/cli/test/e2e.test.ts` (executado com `--test` pelo pacote do CLI):
+`packages/cli/test/e2e.test.ts` verifica o fluxo do gerador de scaffold:
 
-1. Cria app real em `<repo>/.tmp-e2e/<random>/blog` via `newProject(name, { install: false })`.
-2. Copia fixtures `packages/cli/test/fixtures/blog/**` sobre o app (controller, model, views,
-   `db/schema.ts` com `posts`, `db/migrate/0001_create_posts.sql`, rotas extras).
-3. Roda `jot db:migrate` (spawn do CLI) → espera output com "applied 0001".
-4. Sobe `jot server` com `PORT` aleatório (porta livre) e espera a linha de listening (timeout 30s).
-5. `GET /` → 200, HTML contém "Hello from JOT".
-6. `GET /posts` → 200, contém um post inserido pela migration (seed no SQL).
-7. `POST /posts` (form urlencoded) → 303 redirect para `/posts/:id`; `GET` no destino mostra o post.
-8. `GET /posts/99999` → 404 com página amigável.
-9. Mata o servidor e limpa a pasta temporária (mesmo em falha).
+1. Cria um app em diretório temporário e executa `jot generate scaffold` para um recurso com colunas tipadas.
+2. Verifica o typecheck do app e aplica a migration SQLite com `jot db:migrate`.
+3. Sobe `jot server` em porta livre e cobre listagem, formulário, criação, edição, atualização e exclusão.
+4. Confirma que POST sem token CSRF retorna `403`, que os formulários enviam token e que recursos ausentes retornam `404`.
+5. Encerra o servidor e remove os arquivos temporários mesmo em caso de falha.
+
+`examples/blog` mantém um app equivalente usando somente as APIs públicas. O smoke test executa migrations e CRUD/CSRF sem rede.
 
 ## 7. Testes
 
@@ -425,11 +424,15 @@ spawn: node --import tsx --watch --enable-source-maps .jot/entry.ts
   o e2e dourado é a prova de integração.
 - Sem rede nos testes.
 
-## 8. Escopo desta fase (NÃO fazer agora)
+## 8. Escopo da versão 1.0
 
-Associações, callbacks, sessions em banco, generators/scaffold (M2), jobs, mailer, uploads,
-Postgres, bundling de produção, publicação npm, i18n, ilhas/client components.
+Incluídos: generators de model e scaffold, app de referência `examples/blog`, publicação npm dos sete pacotes públicos e documentação em português e inglês. `@jot/testing` segue privado e não é publicado.
+
+Ficam para versões futuras: associações Active Record, callbacks, sessões em banco, jobs, mailer,
+uploads, Postgres, bundling de produção, i18n do runtime e ilhas/client components.
 
 ## 9. Definição de pronto
 
-`npm run typecheck` e `npm test` verdes na raiz (Windows), e o e2e dourado da seção 6 passando.
+`npm run typecheck`, `npm test`, `npm run lint` e `npm run check:packs` verdes. O e2e dourado e o smoke de `examples/blog` passam em Windows e Linux com Node.js 24. Cada tarball contém README em inglês e português, licença MIT e os entrypoints necessários; não contém testes, fixtures ou `tsconfig.json`.
+
+A publicação de cada versão roda em workflow separado, depois de aprovação do ambiente GitHub `npm-publish`, usando npm Trusted Publishing/OIDC. O maintainer configura aprovação obrigatória no ambiente e vínculo de trusted publisher para cada pacote; nenhum token npm de longa duração é usado. Consulte o [guia de release](releasing.md).

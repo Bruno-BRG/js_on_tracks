@@ -1,9 +1,33 @@
 {
   "name": "@jot/db",
   "version": "0.0.0",
-  "private": true,
   "type": "module",
   "license": "MIT",
+  "author": "JOT contributors",
+  "description": "SQLite database, schema, and SQL migration tools for JOT.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Bruno-BRG/js_on_tracks.git",
+    "directory": "packages/db"
+  },
+  "homepage": "https://github.com/Bruno-BRG/js_on_tracks/tree/master/packages/db#readme",
+  "bugs": "https://github.com/Bruno-BRG/js_on_tracks/issues",
+  "keywords": [
+    "jot",
+    "sqlite",
+    "database",
+    "migrations",
+    "drizzle"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "README.pt-BR.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },

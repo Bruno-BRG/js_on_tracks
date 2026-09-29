@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process"
 import { randomBytes } from "node:crypto"
 import { existsSync, statSync } from "node:fs"
-import { cp, readdir, readFile, writeFile } from "node:fs/promises"
+import { cp, readdir, readFile, rename, writeFile } from "node:fs/promises"
+import { EOL } from "node:os"
 import { basename, extname, join, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertKnownFlags, type ParsedArgv } from "../args"
@@ -79,6 +80,7 @@ export async function newProject(
     recursive: true,
     filter: (source) => !source.split(sep).includes("node_modules"),
   })
+  await restoreGitignore(dir)
   await replaceAppName(dir, base, packageName)
   await createEnvFile(dir)
 
@@ -121,8 +123,8 @@ function printNextSteps(result: NewProjectResult, install: boolean): void {
   log("Next steps:")
   log(`  cd ${result.name}`)
   if (!install) log("  npm install")
-  log("  jot db:migrate")
-  log("  jot server  → http://localhost:3000")
+  log("  npm run migrate")
+  log("  npm run dev  → http://localhost:3000")
 }
 
 function sanitizePackageName(name: string): string {
@@ -144,10 +146,22 @@ async function createEnvFile(dir: string): Promise<void> {
   if (!existsSync(example)) return
   const content = await readFile(example, "utf8")
   const secret = randomBytes(32).toString("hex")
-  const replaced = /^JOT_SECRET=.*$/m.test(content)
-    ? content.replace(/^JOT_SECRET=.*$/m, `JOT_SECRET=${secret}`)
-    : `${content.endsWith("\n") ? content : `${content}\n`}JOT_SECRET=${secret}\n`
+  const newline = content.match(/\r\n|\n|\r/)?.[0] ?? EOL
+  const endsWithNewline = /(?:\r\n|\n|\r)$/.test(content)
+  const replaced = /^JOT_SECRET=[^\r\n]*/m.test(content)
+    ? content.replace(/^JOT_SECRET=[^\r\n]*/m, `JOT_SECRET=${secret}`)
+    : `${endsWithNewline ? content : `${content}${newline}`}JOT_SECRET=${secret}${newline}`
   await writeFile(join(dir, ".env"), replaced, "utf8")
+}
+
+async function restoreGitignore(dir: string): Promise<void> {
+  const source = join(dir, "_gitignore")
+  if (!existsSync(source)) {
+    throw new CliError(
+      `App creation stopped because template file "${source}" is missing. The generated directory "${dir}" may be incomplete. Inspect it, move any files you need, then remove "${dir}" before retrying \`jot new <name>\`.`,
+    )
+  }
+  await rename(source, join(dir, ".gitignore"))
 }
 
 async function listFiles(dir: string): Promise<string[]> {

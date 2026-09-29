@@ -1,0 +1,27 @@
+{
+  "name": "jot-blog-example",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "jot server",
+    "migrate": "jot db:migrate",
+    "rollback": "jot db:rollback",
+    "generate": "jot db:generate",
+    "routes": "jot routes",
+    "console": "jot console",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jot-framework": "^1.0.0"
+  },
+  "devDependencies": {
+    "@jot/cli": "^1.0.0",
+    "@types/node": "^26.6.3",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
