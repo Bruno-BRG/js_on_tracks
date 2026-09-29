@@ -1,6 +1,6 @@
 {
   "name": "create-jot",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "author": "JOT contributors",
@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@jot/cli": "^0.0.0",
+    "@jot/cli": "^1.0.0",
     "tsx": "^4.23.15"
   },
   "bin": {
