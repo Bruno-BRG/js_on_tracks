@@ -1,6 +1,6 @@
 {
   "name": "@jot/core",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "author": "JOT contributors",
@@ -40,9 +40,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@jot/db": "^0.0.0",
-    "@jot/orm": "^0.0.0",
-    "@jot/views": "^0.0.0",
+    "@jot/db": "^1.0.0",
+    "@jot/orm": "^1.0.0",
+    "@jot/views": "^1.0.0",
     "hono": "^4.13.9",
     "picocolors": "^1.1.1"
   }
